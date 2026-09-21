@@ -1,0 +1,55 @@
+class: identity
+singleton: false
+datastore: none
+
+uuid_lines:
+  - major: 1
+    minor: 0
+    commit: "312808c619d5ce0b59c5a6cfee1f4e297b4a6a4c"
+
+# Identity objects are keyed by the caller object id.
+# Public verbs: get, subscribe, unsubscribe.
+# Create, set, delete, and notify are not in the public header or proto.
+
+verbs:
+  get:
+    visibility: public
+    comment: Fill the values for the attribute ids in the list.
+  subscribe:
+    visibility: public
+    stream: false
+    comment: Register a watch for the attribute ids in the list. This call returns once.
+  unsubscribe:
+    visibility: public
+    comment: Stop watches for the same caller and the same attribute id list. An empty list stops all watches for that caller.
+  create:
+    visibility: internal
+    comment: Bring up an identity object. Public callers must not use this verb.
+  set:
+    visibility: internal
+    comment: Change attributes that allow set. Not in the public header in this slice.
+  delete:
+    visibility: internal
+    comment: Tear down an identity object.
+  notify:
+    visibility: internal
+    stream: true
+    comment: Push changed attributes to current subscribers.
+
+attrs:
+  KIND:
+    id: 1
+    type: vint32_t
+    proto_type: s32
+    visibility: public
+    flags_public: [READ_ONLY]
+    flags_internal: [READ_ONLY]
+    comment: Kind of this identity object.
+  STATE:
+    id: 2
+    type: vint32_t
+    proto_type: s32
+    visibility: public
+    flags_public: [READ_ONLY, SUBSCRIBABLE]
+    flags_internal: [READ_ONLY, SUBSCRIBABLE]
+    comment: State of this identity object.
