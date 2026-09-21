@@ -1,0 +1,53 @@
+{{ generated_proto }}
+syntax = "proto3";
+
+package vedam;
+
+option java_multiple_files = true;
+option java_package = "org.ltbh.vedam";
+option go_package = "github.com/ltbhappyness/vedam-interface/vedam";
+
+import "vedam/types.proto";
+
+{% if proto_enums %}
+// Enums below belong to this vertical. Shared call types stay in types.proto.
+{% endif %}
+{% for line in proto_notes %}
+{% if line %}
+// {{ line }}
+{% else %}
+//
+{% endif %}
+{% endfor %}
+{% for e in proto_enums %}
+
+enum {{ e.name }} {
+{% for v in e["values"] %}
+  {{ v.name }} = {{ v.value }};{% if v.comment %}  // {{ v.comment }}{% endif %}
+
+{% endfor %}
+}
+{% endfor %}
+
+enum {{ proto_attr_enum.name }} {
+{% for v in proto_attr_enum["values"] %}
+{% for c in v.comments %}
+  // {{ c }}
+{% endfor %}
+  {{ v.name }} = {{ v.value }};
+{% endfor %}
+}
+
+service {{ proto_name }} {
+  option (vertical_uuid) = "{{ uuid_proto_esc }}";
+
+  // Get fills Attr.value for each Attr.id in the request.
+  rpc Get(Message) returns (Message);
+  // Subscribe registers a watch for the ids in the request and returns one Message.
+  rpc Subscribe(Message) returns (Message);
+  // Notify is the stream of later changes for a watch registered by Subscribe.
+  rpc Notify(Message) returns (stream Message);
+  // Unsubscribe stops watches for the ids in the request. An empty attrs list
+  // stops every watch for this caller.
+  rpc Unsubscribe(Message) returns (Message);
+}

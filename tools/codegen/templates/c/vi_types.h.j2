@@ -1,0 +1,136 @@
+{{ generated_c }}
+#ifndef VI_TYPES_H
+#define VI_TYPES_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef uint8_t vuint8_t;
+typedef int8_t vint8_t;
+typedef uint16_t vuint16_t;
+typedef int16_t vint16_t;
+typedef uint32_t vuint32_t;
+typedef int32_t vint32_t;
+typedef uint64_t vuint64_t;
+typedef int64_t vint64_t;
+typedef vuint8_t vbool_t;
+
+#define V_TRUE 1
+#define V_FALSE 0
+
+/** @brief Attribute identifier. */
+typedef vuint32_t v_attr_id_t;
+
+/**
+ * @brief Status codes returned by Vedam verbs.
+ */
+typedef enum _v_status_t {
+{% for item in status_rows %}
+    {{ item.ident }} = {{ item.value }}, /**< {{ item.comment }} */
+{% endfor %}
+} v_status_t;
+
+/**
+ * @brief Protocol or library version pair.
+ */
+typedef struct _v_version_t {
+    vuint32_t major;
+    vuint32_t minor;
+} v_version_t;
+
+/**
+ * @brief Contiguous byte list.
+ */
+typedef struct _v_u8_list_t {
+    vuint32_t count;
+    vuint8_t *list;
+} v_u8_list_t;
+
+/**
+ * @brief Contiguous unsigned 32-bit list.
+ */
+typedef struct _v_u32_list_t {
+    vuint32_t count;
+    vuint32_t *list;
+} v_u32_list_t;
+
+/**
+ * @brief Contiguous signed 32-bit list.
+ */
+typedef struct _v_s32_list_t {
+    vuint32_t count;
+    vint32_t *list;
+} v_s32_list_t;
+
+/**
+ * @brief UTF-8 text with explicit length.
+ */
+typedef struct _v_text_t {
+    vuint32_t len;
+    char *buf;
+} v_text_t;
+
+/**
+ * @brief Attribute value payload. The active member depends on the attribute type.
+ */
+typedef union _v_attr_value_t {
+    vbool_t booldata;
+    vuint8_t u8;
+    vint8_t s8;
+    vuint16_t u16;
+    vint16_t s16;
+    vuint32_t u32;
+    vint32_t s32;
+    vuint64_t u64;
+    vint64_t s64;
+    v_version_t version;
+    v_text_t text;
+    v_u8_list_t u8list;
+    v_u32_list_t u32list;
+    v_s32_list_t s32list;
+    void *ptr;
+} v_attr_value_t;
+
+/**
+ * @brief One attribute: identifier plus value.
+ */
+typedef struct _v_attr_t {
+    v_attr_id_t id;
+    v_attr_value_t value;
+} v_attr_t;
+
+/**
+ * @brief One public call: object key, attributes, and a status per attribute.
+ *
+ * A singleton sets @p key to NULL and @p key_len to 0. When @p attr_count is
+ * greater than zero, both @p attr_list and @p status_list must be non-NULL.
+ * Contract checks write every @p status_list entry. The verb returns success
+ * only when every entry is success; otherwise it returns the first non-success
+ * code.
+ */
+typedef struct _vi_msg_t {
+    const void *key;
+    vuint32_t key_len;
+    vuint32_t attr_count;
+    v_attr_t *attr_list;
+    v_status_t *status_list;
+} vi_msg_t;
+
+/**
+ * @brief Namespace for Vedam's own vertical public ids (16 bytes).
+ *
+ * Vedam hashes vertical/major/minor/commit under this namespace to form a
+ * version-5 UUID. Another author may use that recipe with their own domain, or
+ * may publish sixteen bytes produced another way.
+ */
+static const uint8_t vi_namespace_uuid[16] = { {{ vedam_uuid_ns_c_array }} };
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* VI_TYPES_H */

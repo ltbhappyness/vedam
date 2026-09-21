@@ -1,0 +1,717 @@
+{{ generated_c }}
+#include "vti/codec.h"
+
+#include "platform/memory.h"
+#include "vti/attrwire.h"
+#include "vti/class_uuid.h"
+#include "vti/dispatch.h"
+#include "meta.h"
+#include "vedam/types.pb.h"
+
+#include <google/protobuf/arena.h>
+
+#include <arpa/inet.h>
+
+#include <cstring>
+#include <new>
+
+struct vta_codec_ws {
+    google::protobuf::Arena arena;
+    vedam::Message *wire;
+
+    vta_codec_ws() : arena(), wire(nullptr)
+    {
+        wire = google::protobuf::Arena::CreateMessage<vedam::Message>(&arena);
+    }
+
+    /**
+     * @brief Reset the Arena and recreate the reusable Message.
+     */
+    void recycle(void)
+    {
+        arena.Reset();
+        wire = google::protobuf::Arena::CreateMessage<vedam::Message>(&arena);
+    }
+};
+
+namespace {
+
+/**
+ * @brief Map a library status to a protobuf StatusCode without collapsing errors.
+ *
+ * @param[in] st Library status
+ * @return Matching StatusCode, including indexed-attribute families.
+ */
+static vedam::StatusCode to_proto_code(v_status_t st)
+{
+    if (st == V_STATUS_SUCCESS) {
+        return vedam::STATUS_OK;
+    }
+    if (st == V_STATUS_FAILURE) {
+        return vedam::STATUS_FAILURE;
+    }
+    if (st == V_STATUS_NOT_SUPPORTED) {
+        return vedam::STATUS_NOT_SUPPORTED;
+    }
+    if (st == V_STATUS_NO_MEMORY) {
+        return vedam::STATUS_NO_MEMORY;
+    }
+    if (st == V_STATUS_INVALID_PARAMETER) {
+        return vedam::STATUS_INVALID_PARAMETER;
+    }
+    if (st == V_STATUS_ITEM_ALREADY_EXISTS) {
+        return vedam::STATUS_ITEM_ALREADY_EXISTS;
+    }
+    if (st == V_STATUS_ITEM_NOT_FOUND) {
+        return vedam::STATUS_ITEM_NOT_FOUND;
+    }
+    if (st == V_STATUS_BUFFER_OVERFLOW) {
+        return vedam::STATUS_BUFFER_OVERFLOW;
+    }
+    if (st == V_STATUS_MANDATORY_ATTR_MISSING) {
+        return vedam::STATUS_MANDATORY_ATTR_MISSING;
+    }
+    if (st == V_STATUS_UNINITIALIZED) {
+        return vedam::STATUS_UNINITIALIZED;
+    }
+    if (st == V_STATUS_NOT_IMPLEMENTED) {
+        return vedam::STATUS_NOT_IMPLEMENTED;
+    }
+    if (st == V_STATUS_FAILED_PRECONDITION) {
+        return vedam::STATUS_FAILED_PRECONDITION;
+    }
+    if (st == V_STATUS_CAPABILITY_DENIED) {
+        return vedam::STATUS_CAPABILITY_DENIED;
+    }
+    if (st == V_STATUS_OFFLINE) {
+        return vedam::STATUS_OFFLINE;
+    }
+    if (st == V_STATUS_THERMAL_SHED) {
+        return vedam::STATUS_THERMAL_SHED;
+    }
+    if (st == V_STATUS_OBJECT_IN_USE) {
+        return vedam::STATUS_OBJECT_IN_USE;
+    }
+    if (st <= V_STATUS_INVALID_ATTR_VALUE_0 && st > V_STATUS_INVALID_ATTR_VALUE_0 - 1000) {
+        return vedam::STATUS_INVALID_ATTR_VALUE;
+    }
+    if (st <= V_STATUS_ATTR_NOT_IMPLEMENTED_0 && st > V_STATUS_ATTR_NOT_IMPLEMENTED_0 - 1000) {
+        return vedam::STATUS_ATTR_NOT_IMPLEMENTED;
+    }
+    if (st <= V_STATUS_UNKNOWN_ATTRIBUTE_0 && st > V_STATUS_UNKNOWN_ATTRIBUTE_0 - 1000) {
+        return vedam::STATUS_UNKNOWN_ATTRIBUTE;
+    }
+    if (st <= V_STATUS_ATTR_NOT_SUPPORTED_0 && st > V_STATUS_ATTR_NOT_SUPPORTED_0 - 1000) {
+        return vedam::STATUS_ATTR_NOT_SUPPORTED;
+    }
+    if (st <= V_STATUS_INVALID_ATTR_ID_0 && st > V_STATUS_INVALID_ATTR_ID_0 - 1000) {
+        return vedam::STATUS_INVALID_ATTR_ID;
+    }
+    return vedam::STATUS_FAILURE;
+}
+
+/**
+ * @brief Map a protobuf StatusCode back to a library status.
+ *
+ * @param[in] code       Wire status code
+ * @param[in] attr_index Zero-based attribute index for indexed families
+ * @return Matching v_status_t.
+ */
+static v_status_t from_proto_code(vedam::StatusCode code, int attr_index)
+{
+    switch (code) {
+    case vedam::STATUS_OK:
+        return V_STATUS_SUCCESS;
+    case vedam::STATUS_FAILURE:
+        return V_STATUS_FAILURE;
+    case vedam::STATUS_NOT_SUPPORTED:
+        return V_STATUS_NOT_SUPPORTED;
+    case vedam::STATUS_NO_MEMORY:
+        return V_STATUS_NO_MEMORY;
+    case vedam::STATUS_INVALID_PARAMETER:
+        return V_STATUS_INVALID_PARAMETER;
+    case vedam::STATUS_ITEM_ALREADY_EXISTS:
+        return V_STATUS_ITEM_ALREADY_EXISTS;
+    case vedam::STATUS_ITEM_NOT_FOUND:
+        return V_STATUS_ITEM_NOT_FOUND;
+    case vedam::STATUS_BUFFER_OVERFLOW:
+        return V_STATUS_BUFFER_OVERFLOW;
+    case vedam::STATUS_MANDATORY_ATTR_MISSING:
+        return V_STATUS_MANDATORY_ATTR_MISSING;
+    case vedam::STATUS_UNINITIALIZED:
+        return V_STATUS_UNINITIALIZED;
+    case vedam::STATUS_NOT_IMPLEMENTED:
+        return V_STATUS_NOT_IMPLEMENTED;
+    case vedam::STATUS_FAILED_PRECONDITION:
+        return V_STATUS_FAILED_PRECONDITION;
+    case vedam::STATUS_CAPABILITY_DENIED:
+        return V_STATUS_CAPABILITY_DENIED;
+    case vedam::STATUS_OFFLINE:
+        return V_STATUS_OFFLINE;
+    case vedam::STATUS_THERMAL_SHED:
+        return V_STATUS_THERMAL_SHED;
+    case vedam::STATUS_OBJECT_IN_USE:
+        return V_STATUS_OBJECT_IN_USE;
+    case vedam::STATUS_INVALID_ATTR_VALUE:
+        return (v_status_t)(V_STATUS_INVALID_ATTR_VALUE_0 - attr_index);
+    case vedam::STATUS_ATTR_NOT_IMPLEMENTED:
+        return (v_status_t)(V_STATUS_ATTR_NOT_IMPLEMENTED_0 - attr_index);
+    case vedam::STATUS_UNKNOWN_ATTRIBUTE:
+        return (v_status_t)(V_STATUS_UNKNOWN_ATTRIBUTE_0 - attr_index);
+    case vedam::STATUS_ATTR_NOT_SUPPORTED:
+        return (v_status_t)(V_STATUS_ATTR_NOT_SUPPORTED_0 - attr_index);
+    case vedam::STATUS_INVALID_ATTR_ID:
+        return (v_status_t)(V_STATUS_INVALID_ATTR_ID_0 - attr_index);
+    default:
+        return V_STATUS_FAILURE;
+    }
+}
+
+/**
+ * @brief Store one attribute value into a protobuf Attr by type kind.
+ *
+ * @param[in]  class_id Class index
+ * @param[in]  src      Source attribute
+ * @param[out] dst      Protobuf attribute
+ * @return 0 on success, -1 when the kind is unknown.
+ */
+static int put_attr_value(v_class_id_t class_id, const v_attr_t *src, vedam::Attr *dst)
+{
+    int kind;
+
+    kind = vta_attr_kind(class_id, src->id);
+    dst->set_id(src->id);
+    if (kind == VIA_T_S32) {
+        dst->mutable_value()->set_s32(src->value.s32);
+    } else if (kind == VIA_T_BOOL) {
+        dst->mutable_value()->set_booldata(src->value.booldata != 0);
+    } else if (kind == VIA_T_VERSION) {
+        vedam::Version *ver = dst->mutable_value()->mutable_version();
+
+        ver->set_major(src->value.version.major);
+        ver->set_minor(src->value.version.minor);
+    } else if (kind == VIA_T_TEXT) {
+        if (src->value.text.buf != NULL && src->value.text.len > 0) {
+            dst->mutable_value()->set_text(src->value.text.buf, src->value.text.len);
+        } else {
+            dst->mutable_value()->set_text("");
+        }
+    } else if (kind == VIA_T_PTR) {
+        vuint32_t nbytes;
+
+        nbytes = vta_attr_ptr_size(class_id, src->id);
+        if (src->value.ptr != NULL && nbytes > 0) {
+            dst->mutable_value()->set_blob(src->value.ptr, nbytes);
+        } else {
+            dst->mutable_value()->set_blob("");
+        }
+    } else if (kind < 0) {
+        /* Unknown id crosses the wire so VIA can reject it. */
+    } else {
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Load one attribute value from a protobuf Attr into caller memory.
+ *
+ * @param[in]     class_id Class index
+ * @param[in]     src      Protobuf attribute
+ * @param[in,out] dst      Destination attribute (text/ptr buffers already set)
+ * @return 0 on success, -1 when the value cannot be copied.
+ */
+static int take_attr_value(v_class_id_t class_id, const vedam::Attr &src, v_attr_t *dst)
+{
+    int kind;
+
+    kind = vta_attr_kind(class_id, src.id());
+    dst->id = src.id();
+    if (kind == VIA_T_S32) {
+        dst->value.s32 = src.value().s32();
+    } else if (kind == VIA_T_BOOL) {
+        dst->value.booldata = src.value().booldata() ? 1 : 0;
+    } else if (kind == VIA_T_VERSION) {
+        dst->value.version.major = src.value().version().major();
+        dst->value.version.minor = src.value().version().minor();
+    } else if (kind == VIA_T_TEXT) {
+        const std::string &text = src.value().text();
+
+        if (dst->value.text.buf == NULL) {
+            return -1;
+        }
+        if (text.size() > 0) {
+            vplatform_memcpy(dst->value.text.buf, text.data(), text.size());
+        }
+        dst->value.text.len = (vuint32_t)text.size();
+    } else if (kind == VIA_T_PTR) {
+        const std::string &blob = src.value().blob();
+        vuint32_t nbytes;
+
+        nbytes = vta_attr_ptr_size(class_id, src.id());
+        if (dst->value.ptr == NULL) {
+            return -1;
+        }
+        if (nbytes > 0) {
+            if (blob.size() < nbytes) {
+                vplatform_memset(dst->value.ptr, 0, nbytes);
+                if (!blob.empty()) {
+                    vplatform_memcpy(dst->value.ptr, blob.data(), blob.size());
+                }
+            } else {
+                vplatform_memcpy(dst->value.ptr, blob.data(), nbytes);
+            }
+        }
+    } else if (kind < 0) {
+        /* Unknown id: keep id only so VIA can reject it. */
+    } else {
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Fill a protobuf Message from @p msg and @p overall.
+ *
+ * @param[in]  class_id Class index
+ * @param[in]  msg      Public message
+ * @param[in]  overall  Overall status
+ * @param[out] wire     Protobuf message
+ * @return V_STATUS_SUCCESS, or V_STATUS_INVALID_PARAMETER on a bad attribute.
+ */
+static v_status_t fill_message(v_class_id_t class_id, const vi_msg_t *msg, v_status_t overall,
+                               vedam::Message *wire)
+{
+    vuint32_t i;
+    int rc;
+
+    wire->Clear();
+    if (msg->key != NULL && msg->key_len > 0) {
+        wire->set_key(msg->key, msg->key_len);
+    }
+    wire->mutable_status()->set_code(to_proto_code(overall));
+    wire->mutable_status()->set_vedam_status(static_cast<int32_t>(overall));
+    for (i = 0; i < msg->attr_count; i++) {
+        vedam::Attr *dst = wire->add_attrs();
+        v_status_t st;
+
+        rc = put_attr_value(class_id, &msg->attr_list[i], dst);
+        if (rc != 0) {
+            return V_STATUS_INVALID_PARAMETER;
+        }
+        st = msg->status_list != NULL ? msg->status_list[i] : V_STATUS_SUCCESS;
+        dst->mutable_status()->set_code(to_proto_code(st));
+        dst->mutable_status()->set_vedam_status(static_cast<int32_t>(st));
+    }
+    return V_STATUS_SUCCESS;
+}
+
+/**
+ * @brief Copy a protobuf Message into @p msg.
+ *
+ * @param[in]     class_id     Class index
+ * @param[in]     wire         Protobuf message
+ * @param[in,out] msg          Public message (arrays sized on entry)
+ * @param[out]    overall      Overall status
+ * @param[out]    key_buf      Server key copy, or NULL
+ * @param[in]     key_cap      Capacity of @p key_buf
+ * @param[in]     preserve_key Non-zero to leave msg->key unchanged
+ * @return V_STATUS_SUCCESS, or a failure when counts or values are bad.
+ */
+static v_status_t drain_message(v_class_id_t class_id, const vedam::Message &wire, vi_msg_t *msg,
+                                v_status_t *overall, uint8_t *key_buf, size_t key_cap,
+                                int preserve_key)
+{
+    int n;
+    int i;
+    int rc;
+
+    n = wire.attrs_size();
+    if (n < 0 || (vuint32_t)n > msg->attr_count) {
+        return V_STATUS_BUFFER_OVERFLOW;
+    }
+    if ((vuint32_t)n > 0 && (msg->attr_list == NULL || msg->status_list == NULL)) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+    if (!preserve_key) {
+        if (wire.key().size() > 0) {
+            if (key_buf == NULL || wire.key().size() > key_cap) {
+                return V_STATUS_BUFFER_OVERFLOW;
+            }
+            vplatform_memcpy(key_buf, wire.key().data(), wire.key().size());
+            msg->key = key_buf;
+            msg->key_len = (vuint32_t)wire.key().size();
+        } else {
+            msg->key = NULL;
+            msg->key_len = 0;
+        }
+    }
+    for (i = 0; i < n; i++) {
+        const vedam::Attr &src = wire.attrs(i);
+
+        rc = take_attr_value(class_id, src, &msg->attr_list[i]);
+        if (rc != 0) {
+            return V_STATUS_INVALID_PARAMETER;
+        }
+        msg->status_list[i] = (v_status_t)src.status().vedam_status();
+        if (msg->status_list[i] == V_STATUS_SUCCESS &&
+            src.status().code() != vedam::STATUS_OK &&
+            src.status().code() != vedam::STATUS_CODE_UNSPECIFIED) {
+            msg->status_list[i] = from_proto_code(src.status().code(), i);
+        }
+    }
+    msg->attr_count = (vuint32_t)n;
+    *overall = (v_status_t)wire.status().vedam_status();
+    if (*overall == V_STATUS_SUCCESS && wire.status().code() != vedam::STATUS_OK &&
+        wire.status().code() != vedam::STATUS_CODE_UNSPECIFIED) {
+        *overall = from_proto_code(wire.status().code(), 0);
+    }
+    return V_STATUS_SUCCESS;
+}
+
+} /* namespace */
+
+/**
+ * @brief Allocate a codec workspace (Arena and one Message).
+ *
+ * @return Workspace pointer, or NULL when allocation fails.
+ */
+extern "C" vta_codec_ws_t *vta_codec_ws_create(void)
+{
+    try {
+        return new vta_codec_ws();
+    } catch (const std::bad_alloc &) {
+        return nullptr;
+    }
+}
+
+/**
+ * @brief Free a codec workspace.
+ *
+ * @param[in] ws Workspace from vta_codec_ws_create, or NULL
+ */
+extern "C" void vta_codec_ws_destroy(vta_codec_ws_t *ws)
+{
+    delete ws;
+}
+
+/**
+ * @brief Map a library status to a grpc-web digit string.
+ *
+ * @param[in] st Library status
+ * @return Static digit string for the HTTP trailer.
+ */
+extern "C" const char *vta_codec_grpc_digits(v_status_t st)
+{
+    if (st == V_STATUS_SUCCESS) {
+        return "0";
+    }
+    if (st == V_STATUS_NOT_IMPLEMENTED) {
+        return "12";
+    }
+    return "2";
+}
+
+/**
+ * @brief Write the five-byte grpc-web frame header at the front of @p buf.
+ *
+ * The encoded Message must already occupy @p buf[5 .. 5 + payload_len).
+ *
+ * @param[in,out] buf         Buffer with payload at offset 5
+ * @param[in]     buf_cap     Capacity of @p buf
+ * @param[in]     payload_len Encoded Message length after the header
+ * @param[out]    out_len     Total framed length (5 + payload_len)
+ * @return V_STATUS_SUCCESS, or V_STATUS_BUFFER_OVERFLOW when @p buf is too small.
+ */
+extern "C" v_status_t vta_codec_grpc_frame(uint8_t *buf, size_t buf_cap, size_t payload_len,
+                                           size_t *out_len)
+{
+    uint32_t n;
+
+    if (buf == NULL || out_len == NULL) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+    if (buf_cap < 5u + payload_len) {
+        return V_STATUS_BUFFER_OVERFLOW;
+    }
+    n = htonl(static_cast<uint32_t>(payload_len));
+    buf[0] = 0;
+    std::memcpy(buf + 1, &n, 4);
+    *out_len = 5u + payload_len;
+    return V_STATUS_SUCCESS;
+}
+
+/**
+ * @brief Strip a five-byte grpc-web frame header when present.
+ *
+ * @param[in,out] body     Points at the body start
+ * @param[in,out] body_len Body length
+ */
+extern "C" void vta_codec_grpc_unframe(const uint8_t **body, size_t *body_len)
+{
+    if (body == NULL || body_len == NULL || *body == NULL) {
+        return;
+    }
+    if (*body_len >= 5 && (*body)[0] == 0) {
+        *body += 5;
+        *body_len -= 5;
+    }
+}
+
+/**
+ * @brief Verb path segment for @p verb, or NULL when unknown.
+ *
+ * @param[in] verb Verb identifier
+ * @return Static name string, or NULL.
+ */
+extern "C" const char *vta_codec_verb_name(v_verb_t verb)
+{
+    switch (verb) {
+    case V_VERB_GET:
+        return "Get";
+    case V_VERB_SUBSCRIBE:
+        return "Subscribe";
+    case V_VERB_UNSUBSCRIBE:
+        return "Unsubscribe";
+    case V_VERB_CREATE:
+        return "Create";
+    case V_VERB_SET:
+        return "Set";
+    case V_VERB_DELETE:
+        return "Delete";
+    case V_VERB_NOTIFY:
+        return "Notify";
+    default:
+        return NULL;
+    }
+}
+
+/**
+ * @brief Parse a verb path segment into @p verb.
+ *
+ * @param[in]  name Verb path segment
+ * @param[out] verb Receives the verb id
+ * @return V_STATUS_SUCCESS, or V_STATUS_NOT_IMPLEMENTED when unknown.
+ */
+extern "C" v_status_t vta_codec_verb_parse(const char *name, v_verb_t *verb)
+{
+    if (name == NULL || verb == NULL) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+    if (std::strcmp(name, "Get") == 0) {
+        *verb = V_VERB_GET;
+        return V_STATUS_SUCCESS;
+    }
+    if (std::strcmp(name, "Subscribe") == 0) {
+        *verb = V_VERB_SUBSCRIBE;
+        return V_STATUS_SUCCESS;
+    }
+    if (std::strcmp(name, "Unsubscribe") == 0) {
+        *verb = V_VERB_UNSUBSCRIBE;
+        return V_STATUS_SUCCESS;
+    }
+    if (std::strcmp(name, "Create") == 0) {
+        *verb = V_VERB_CREATE;
+        return V_STATUS_SUCCESS;
+    }
+    if (std::strcmp(name, "Set") == 0) {
+        *verb = V_VERB_SET;
+        return V_STATUS_SUCCESS;
+    }
+    if (std::strcmp(name, "Delete") == 0) {
+        *verb = V_VERB_DELETE;
+        return V_STATUS_SUCCESS;
+    }
+    if (std::strcmp(name, "Notify") == 0) {
+        *verb = V_VERB_NOTIFY;
+        return V_STATUS_SUCCESS;
+    }
+    return V_STATUS_NOT_IMPLEMENTED;
+}
+
+/**
+ * @brief Encode @p msg as a protobuf Message into @p buf.
+ *
+ * @param[in]  class_id Class index used for attribute type kinds
+ * @param[in]  msg      Public message to encode
+ * @param[in]  overall  Overall status written into Message.status
+ * @param[out] buf      Connection-owned output buffer
+ * @param[in]  cap      Capacity of @p buf
+ * @param[out] out_len  Encoded byte count
+ * @param[in,out] ws    Connection-owned codec workspace
+ * @return V_STATUS_SUCCESS, or a failure when the message does not fit.
+ */
+extern "C" v_status_t vta_codec_encode(v_class_id_t class_id, const vi_msg_t *msg, v_status_t overall,
+                                       uint8_t *buf, size_t cap, size_t *out_len, vta_codec_ws_t *ws)
+{
+    v_status_t st;
+    size_t n;
+
+    if (msg == NULL || buf == NULL || out_len == NULL || ws == NULL || ws->wire == NULL) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+    if (msg->attr_count > 0 && (msg->attr_list == NULL || msg->status_list == NULL)) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+
+    ws->recycle();
+    st = fill_message(class_id, msg, overall, ws->wire);
+    if (st != V_STATUS_SUCCESS) {
+        return st;
+    }
+
+    n = ws->wire->ByteSizeLong();
+    if (n > cap) {
+        return V_STATUS_BUFFER_OVERFLOW;
+    }
+    if (!ws->wire->SerializeToArray(buf, static_cast<int>(n))) {
+        return V_STATUS_FAILURE;
+    }
+    *out_len = n;
+    return V_STATUS_SUCCESS;
+}
+
+/**
+ * @brief Decode a protobuf Message into @p msg.
+ *
+ * @param[in]     class_id     Class index used for attribute type kinds
+ * @param[in]     buf          Encoded Message bytes
+ * @param[in]     len          Length of @p buf
+ * @param[in,out] msg          Public message to fill
+ * @param[out]    overall      Overall status from Message.status
+ * @param[in,out] ws           Connection-owned codec workspace
+ * @param[out]    key_buf      Server-side key copy buffer, or NULL when unused
+ * @param[in]     key_cap      Capacity of @p key_buf
+ * @param[in]     preserve_key Non-zero to leave the caller's key pointer alone
+ * @return V_STATUS_SUCCESS, or a failure when the frame is bad.
+ */
+extern "C" v_status_t vta_codec_decode(v_class_id_t class_id, const uint8_t *buf, size_t len,
+                                       vi_msg_t *msg, v_status_t *overall, vta_codec_ws_t *ws,
+                                       uint8_t *key_buf, size_t key_cap, int preserve_key)
+{
+    if (msg == NULL || overall == NULL || ws == NULL || ws->wire == NULL) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+    if (buf == NULL && len != 0) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+
+    ws->recycle();
+    if (!ws->wire->ParseFromArray(buf, static_cast<int>(len))) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+    return drain_message(class_id, *ws->wire, msg, overall, key_buf, key_cap, preserve_key);
+}
+
+/**
+ * @brief Serve one HTTP verb using connection-owned @p mem and @p out_buf.
+ *
+ * @param[in]  class_name  Hyphenated vertical UUID from the path
+ * @param[in]  verb_name   Verb path segment
+ * @param[in]  body        Request body bytes (grpc frame already stripped)
+ * @param[in]  body_len    Length of @p body
+ * @param[out] out_buf     Connection-owned response buffer
+ * @param[in]  out_cap     Capacity of @p out_buf
+ * @param[out] out_len     Response byte count including the five-byte prefix
+ * @param[out] grpc_status Static digit string for the trailer
+ * @param[in,out] mem      Connection-owned codec memory
+ * @return 0 when a response was produced, -1 when the body cannot be read.
+ */
+extern "C" int vta_codec_http(const char *class_name, const char *verb_name, const uint8_t *body,
+                              size_t body_len, uint8_t *out_buf, size_t out_cap, size_t *out_len,
+                              const char **grpc_status, struct vta_codec_mem *mem)
+{
+    uint8_t uuid[VTA_CLASS_UUID_LEN];
+    vi_msg_t vim;
+    vta_msg_t call;
+    v_class_id_t class_id;
+    vuint32_t major;
+    vuint32_t minor;
+    v_verb_t verb;
+    v_status_t st;
+    v_status_t overall;
+    size_t payload_len;
+    size_t framed_len;
+    vuint32_t i;
+    int kind;
+
+    if (class_name == NULL || verb_name == NULL || out_buf == NULL || out_len == NULL ||
+        grpc_status == NULL || mem == NULL || mem->ws == NULL) {
+        return -1;
+    }
+    if (body == NULL && body_len != 0) {
+        return -1;
+    }
+    *out_len = 0;
+    *grpc_status = "12";
+
+    st = vta_class_uuid_parse(class_name, uuid);
+    if (st != V_STATUS_SUCCESS) {
+        return 0;
+    }
+
+    st = vta_class_from_uuid(uuid, &class_id, &major, &minor);
+    if (st != V_STATUS_SUCCESS) {
+        return 0;
+    }
+
+    st = vta_codec_verb_parse(verb_name, &verb);
+    if (st != V_STATUS_SUCCESS) {
+        return 0;
+    }
+
+    vplatform_memset(&vim, 0, sizeof(vim));
+    vplatform_memset(&call, 0, sizeof(call));
+    vplatform_memset(mem->attrs, 0, sizeof(mem->attrs));
+    vplatform_memset(mem->statuses, 0, sizeof(mem->statuses));
+    vim.attr_count = VTA_CODEC_MAX_ATTR;
+    vim.attr_list = mem->attrs;
+    vim.status_list = mem->statuses;
+    for (i = 0; i < VTA_CODEC_MAX_ATTR; i++) {
+        mem->attrs[i].value.ptr = mem->scratch[i];
+        mem->attrs[i].value.text.buf = (char *)mem->scratch[i];
+        mem->attrs[i].value.text.len = 0;
+    }
+
+    st = vta_codec_decode(class_id, body == NULL ? (const uint8_t *)"" : body, body_len, &vim,
+                          &overall, mem->ws, mem->key, sizeof(mem->key), 0);
+    if (st != V_STATUS_SUCCESS) {
+        return -1;
+    }
+
+    /* Re-point text/ptr buffers after decode overwrote union members for scalars. */
+    for (i = 0; i < vim.attr_count; i++) {
+        kind = vta_attr_kind(class_id, mem->attrs[i].id);
+        if (kind == VIA_T_PTR) {
+            mem->attrs[i].value.ptr = mem->scratch[i];
+        } else if (kind == VIA_T_TEXT) {
+            mem->attrs[i].value.text.buf = (char *)mem->scratch[i];
+            mem->attrs[i].value.text.len = 0;
+        }
+    }
+
+    call.class_id = class_id;
+    call.origin = V_ORIGIN_EXTERNAL;
+    call.verb = verb;
+    call.major = major;
+    call.minor = minor;
+    call.msg = &vim;
+    overall = vta_dispatch(&call);
+
+    if (out_cap < 5u) {
+        return -1;
+    }
+    st = vta_codec_encode(class_id, &vim, overall, out_buf + 5, out_cap - 5u, &payload_len,
+                          mem->ws);
+    if (st != V_STATUS_SUCCESS) {
+        return -1;
+    }
+
+    st = vta_codec_grpc_frame(out_buf, out_cap, payload_len, &framed_len);
+    if (st != V_STATUS_SUCCESS) {
+        return -1;
+    }
+    *out_len = framed_len;
+    *grpc_status = vta_codec_grpc_digits(overall);
+    return 0;
+}

@@ -1,0 +1,142 @@
+{{ generated_c }}
+#ifndef VII_CLASS_{{ class_ident }}_H
+#define VII_CLASS_{{ class_ident }}_H
+
+#include "vi/class/{{ class_name }}.h"
+#include "vii/types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief Highest major index for a supported {{ class_name }} UUID line.
+ */
+enum { VII_{{ class_ident }}_UUID_MAJOR_MAX = {{ uuid_major_max }} };
+
+/**
+ * @brief Highest minor index for a supported {{ class_name }} UUID line.
+ */
+enum { VII_{{ class_ident }}_UUID_MINOR_MAX = {{ uuid_minor_max }} };
+
+/**
+ * @brief Latest major for local {{ class_name }} calls.
+ */
+enum { VII_{{ class_ident }}_MAJOR = {{ uuid_major }} };
+
+/**
+ * @brief Latest minor for local {{ class_name }} calls.
+ */
+enum { VII_{{ class_ident }}_MINOR = {{ uuid_minor }} };
+
+/**
+ * @brief Every supported {{ class_name }} UUID line, indexed by major then minor.
+ *
+ * A slot with no YAML line is left zero. The public header keeps only the latest
+ * line; this table is for the library and the edge map.
+ */
+static const uint8_t vii_{{ class_name }}_uuid[VII_{{ class_ident }}_UUID_MAJOR_MAX + 1]
+                                            [VII_{{ class_ident }}_UUID_MINOR_MAX + 1]
+                                            [16] = {
+{% for row in uuid_grid %}
+    {
+{% for cell in row %}
+        { {{ cell }} },
+{% endfor %}
+    },
+{% endfor %}
+};
+
+/**
+ * @brief Internal verbs for {{ class_name }}. Attribute ids live in vi/class/{{ class_name }}.h.
+ */
+
+/**
+ * @brief Create the {{ class_name }} object. Origin must be internal.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     major  Vertical major from the UUID line
+ * @param[in]     minor  Vertical minor from the UUID line
+ * @param[in,out] msg    Call message (key and attributes)
+ * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
+ */
+v_status_t vii_{{ class_name }}_create(v_origin_t origin, vuint32_t major, vuint32_t minor,
+                                       vi_msg_t *msg);
+
+/**
+ * @brief Fill attribute values after contract checks.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     major  Vertical major from the UUID line
+ * @param[in]     minor  Vertical minor from the UUID line
+ * @param[in,out] msg    Call message
+ * @return The library status after the contract checks.
+ */
+v_status_t vii_{{ class_name }}_get(v_origin_t origin, vuint32_t major, vuint32_t minor,
+                                    vi_msg_t *msg);
+
+/**
+ * @brief Change attributes that allow set. Origin must be internal.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     major  Vertical major from the UUID line
+ * @param[in]     minor  Vertical minor from the UUID line
+ * @param[in,out] msg    Call message
+ * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
+ */
+v_status_t vii_{{ class_name }}_set(v_origin_t origin, vuint32_t major, vuint32_t minor,
+                                    vi_msg_t *msg);
+
+/**
+ * @brief Tear down the {{ class_name }} object. Origin must be internal.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     major  Vertical major from the UUID line
+ * @param[in]     minor  Vertical minor from the UUID line
+ * @param[in,out] msg    Call message (key only)
+ * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
+ */
+v_status_t vii_{{ class_name }}_delete(v_origin_t origin, vuint32_t major, vuint32_t minor,
+                                       vi_msg_t *msg);
+
+/**
+ * @brief Watch SUBSCRIBABLE attributes.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     major  Vertical major from the UUID line
+ * @param[in]     minor  Vertical minor from the UUID line
+ * @param[in,out] msg    Call message
+ * @return The library status after the contract checks.
+ */
+v_status_t vii_{{ class_name }}_subscribe(v_origin_t origin, vuint32_t major, vuint32_t minor,
+                                          vi_msg_t *msg);
+
+/**
+ * @brief Stop watches for the same attribute id list.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     major  Vertical major from the UUID line
+ * @param[in]     minor  Vertical minor from the UUID line
+ * @param[in,out] msg    Call message
+ * @return The library status.
+ */
+v_status_t vii_{{ class_name }}_unsubscribe(v_origin_t origin, vuint32_t major, vuint32_t minor,
+                                            vi_msg_t *msg);
+
+/**
+ * @brief Push changed attributes to current subscribers.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     major  Vertical major from the UUID line
+ * @param[in]     minor  Vertical minor from the UUID line
+ * @param[in,out] msg    Call message
+ * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
+ */
+v_status_t vii_{{ class_name }}_notify(v_origin_t origin, vuint32_t major, vuint32_t minor,
+                                       vi_msg_t *msg);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* VII_CLASS_{{ class_ident }}_H */

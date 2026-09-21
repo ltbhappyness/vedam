@@ -1,0 +1,60 @@
+{{ generated_c }}
+#include "vti/attrwire.h"
+
+#include "meta.h"
+{% for cls in classes %}
+#include "vi/class/{{ cls.class_name }}.h"
+{% endfor %}
+
+/**
+ * @brief Return the VIA type kind for @p id on @p class_id.
+ *
+ * @param[in] class_id Local class index
+ * @param[in] id       Attribute id
+ * @return A VIA_T_* kind, or -1 when unknown.
+ */
+int vta_attr_kind(v_class_id_t class_id, v_attr_id_t id)
+{
+    switch (class_id) {
+{% for cls in classes %}
+    case V_CLASS_{{ cls.class_ident }}:
+        switch (id) {
+{% for a in cls.attrs %}
+        case {{ a.id }}:
+            return {{ a.type_kind }};
+{% endfor %}
+        default:
+            return -1;
+        }
+{% endfor %}
+    default:
+        return -1;
+    }
+}
+
+/**
+ * @brief Byte size of a pointer-valued attribute for the queue codec.
+ *
+ * @param[in] class_id Local class index
+ * @param[in] id       Attribute id
+ * @return Size in bytes, or 0 when the attribute is not a pointer kind.
+ */
+vuint32_t vta_attr_ptr_size(v_class_id_t class_id, v_attr_id_t id)
+{
+{% for cls in classes %}
+    if (class_id == V_CLASS_{{ cls.class_ident }}) {
+        switch (id) {
+{% for a in cls.attrs %}
+{% if a.type_kind == "VIA_T_PTR" %}
+        case {{ a.id }}:
+            return (vuint32_t)sizeof({{ a.type }});
+{% endif %}
+{% endfor %}
+        default:
+            return 0;
+        }
+    }
+{% endfor %}
+    (void)id;
+    return 0;
+}

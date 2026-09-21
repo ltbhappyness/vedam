@@ -9,3 +9,5 @@
 compile_commands.json
 .cache/
 cmake-build-*/
+__pycache__/
+*.pyc
