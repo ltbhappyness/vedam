@@ -15,6 +15,8 @@
 #include "vti/grpc.h"
 #include "vedam/types.pb.h"
 
+#include <gtest/gtest.h>
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <cstdio>
@@ -141,7 +143,7 @@ static int http_read(uint16_t port, const std::string &path_uuid, const std::str
  *
  * @return 0 on success, 1 on failure.
  */
-int main(void)
+int vedam_legacy_grpc(void)
 {
     vedam::Message req;
     vedam::Message resp;
@@ -194,4 +196,9 @@ int main(void)
         return 1;
     }
     return 0;
+}
+
+TEST(VtaHttp, LegacySystemGet)
+{
+    EXPECT_EQ(vedam_legacy_grpc(), 0);
 }

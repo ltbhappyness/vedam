@@ -22,7 +22,7 @@ v_status_t vds_singleton_create(vds_singleton_t **store)
     if (store == NULL) {
         return V_STATUS_INVALID_PARAMETER;
     }
-    object = (vds_singleton_t *)vplatform_calloc(1, sizeof(*object));
+    object = vplatform_calloc(1, sizeof(*object));
     if (object == NULL) {
         return V_STATUS_NO_MEMORY;
     }

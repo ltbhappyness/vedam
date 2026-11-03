@@ -23,7 +23,7 @@ v_status_t vds_hashkv_create(vds_hashkv_t **store)
     if (store == NULL) {
         return V_STATUS_INVALID_PARAMETER;
     }
-    kv = (vds_hashkv_t *)vplatform_calloc(1, sizeof(*kv));
+    kv = vplatform_calloc(1, sizeof(*kv));
     if (kv == NULL) {
         return V_STATUS_NO_MEMORY;
     }

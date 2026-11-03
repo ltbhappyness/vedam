@@ -91,7 +91,7 @@ static v_status_t grpc_listen(vta_desc_t *desc, const char *address)
         vlog_error("grpc address is empty");
         return V_STATUS_INVALID_PARAMETER;
     }
-    c = (struct grpc_ctx *)vplatform_calloc(1, sizeof(*c));
+    c = vplatform_calloc(1, sizeof(*c));
     if (c == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -251,7 +251,7 @@ static v_status_t grpc_connect(vta_desc_t *desc, const char *address)
         return V_STATUS_INVALID_PARAMETER;
     }
 
-    c = (struct grpc_ctx *)vplatform_calloc(1, sizeof(*c));
+    c = vplatform_calloc(1, sizeof(*c));
     if (c == NULL) {
         return V_STATUS_NO_MEMORY;
     }

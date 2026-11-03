@@ -86,6 +86,11 @@ static const char *pick(const char *env_name, const char *fallback)
 
 /**
  * @brief Open a receiver and listen on @p address.
+ *
+ * @param[out] out     Receives the listening descriptor
+ * @param[in]  link    Transport link index
+ * @param[in]  address Listen address, or NULL when the link has none
+ * @return V_STATUS_SUCCESS, V_STATUS_NO_MEMORY, or the listen status.
  */
 static v_status_t boot_rx(vta_desc_t **out, int link, const char *address)
 {
@@ -110,6 +115,8 @@ static v_status_t boot_rx(vta_desc_t **out, int link, const char *address)
 
 /**
  * @brief Allocate the node and start receive paths, then run internal create.
+ *
+ * @return V_STATUS_SUCCESS, or a failure status when setup cannot finish.
  */
 v_status_t vedam_init(void)
 {
@@ -169,7 +176,7 @@ v_status_t vedam_init(void)
     addr[VTA_LINK_IPC] = ipc_address;
     addr[VTA_LINK_REMOTE] = remote_address;
 
-    node = (vedam_t *)vplatform_calloc(1, sizeof(*node));
+    node = vplatform_calloc(1, sizeof(*node));
     if (node == NULL) {
         return V_STATUS_NO_MEMORY;
     }

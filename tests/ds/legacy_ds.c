@@ -122,7 +122,7 @@ static int test_stores(void)
     return 0;
 }
 
-int main(void)
+int vedam_legacy_ds(void)
 {
     if (test_list() != 0 || test_stack() != 0 || test_queue() != 0 || test_stores() != 0) {
         return 1;

@@ -143,8 +143,9 @@ static void spin_unlock(_Atomic uint32_t *gate)
  */
 static int locks_verb(v_verb_t verb)
 {
-    return verb == V_VERB_CREATE || verb == V_VERB_GET || verb == V_VERB_SET || verb == V_VERB_DELETE ||
-           verb == V_VERB_SUBSCRIBE || verb == V_VERB_UNSUBSCRIBE || verb == V_VERB_NOTIFY;
+    return verb == V_VERB_CREATE || verb == V_VERB_GET || verb == V_VERB_SET ||
+           verb == V_VERB_DELETE || verb == V_VERB_SUBSCRIBE || verb == V_VERB_UNSUBSCRIBE ||
+           verb == V_VERB_NOTIFY;
 }
 
 /**
@@ -177,8 +178,8 @@ static int attr_exclusive(v_verb_t verb)
  * @param[in] stack_cap Argument stack_cap
  * @return Result of copy_object_key.
  */
-static int copy_object_key(const void *key, vuint32_t key_len, unsigned char **out, vuint32_t *out_len,
-                           unsigned char *stack, vuint32_t stack_cap)
+static int copy_object_key(const void *key, vuint32_t key_len, unsigned char **out,
+                           vuint32_t *out_len, unsigned char *stack, vuint32_t stack_cap)
 {
     unsigned char *buf;
 
@@ -196,7 +197,7 @@ static int copy_object_key(const void *key, vuint32_t key_len, unsigned char **o
     if (key_len <= stack_cap) {
         buf = stack;
     } else {
-        buf = (unsigned char *)vplatform_calloc(1, key_len);
+        buf = vplatform_calloc(1, key_len);
         if (buf == NULL) {
             return -2;
         }
@@ -314,13 +315,13 @@ static void unpin_all(struct vedam_lockdb *db)
  * @return Result of alloc_object.
  */
 static struct vedam_lock_object *alloc_object(struct vedam_lockdb *db, v_class_id_t class_id,
-                                             int is_singleton, const unsigned char *hash_key,
-                                             vuint32_t hash_len)
+                                              int is_singleton, const unsigned char *hash_key,
+                                              vuint32_t hash_len)
 {
     struct vedam_lock_object *obj;
     v_status_t rc;
 
-    obj = (struct vedam_lock_object *)vplatform_calloc(1, sizeof(*obj));
+    obj = vplatform_calloc(1, sizeof(*obj));
     if (obj == NULL) {
         return NULL;
     }
@@ -334,7 +335,7 @@ static struct vedam_lock_object *alloc_object(struct vedam_lockdb *db, v_class_i
         return NULL;
     }
     if (hash_len > 0) {
-        obj->hash_key = (unsigned char *)vplatform_calloc(1, hash_len);
+        obj->hash_key = vplatform_calloc(1, hash_len);
         if (obj->hash_key == NULL) {
             object_destroy(obj);
             return NULL;
@@ -360,7 +361,7 @@ static int finish_pin(struct vedam_lockdb *db, struct vedam_lock_object *obj, in
         atomic_fetch_sub_explicit(&obj->ref, 1, memory_order_relaxed);
         return 0;
     }
-    pin = (struct pin *)vplatform_calloc(1, sizeof(*pin));
+    pin = vplatform_calloc(1, sizeof(*pin));
     if (pin == NULL) {
         unpin_obj(db, obj);
         *err = (int)V_STATUS_NO_MEMORY;
@@ -379,7 +380,8 @@ static int finish_pin(struct vedam_lockdb *db, struct vedam_lock_object *obj, in
  * @param[in] err Argument err
  * @return Result of pin_singleton.
  */
-static struct vedam_lock_object *pin_singleton(struct vedam_lockdb *db, v_class_id_t class_id, int *err)
+static struct vedam_lock_object *pin_singleton(struct vedam_lockdb *db, v_class_id_t class_id,
+                                               int *err)
 {
     struct vedam_lock_object *spare = NULL;
     struct vedam_lock_object *obj = NULL;
@@ -437,7 +439,7 @@ static struct vedam_lock_object *pin_singleton(struct vedam_lockdb *db, v_class_
  * @return Result of pin_keyed.
  */
 static struct vedam_lock_object *pin_keyed(struct vedam_lockdb *db, v_class_id_t class_id,
-                                          const void *key, vuint32_t key_len, int *err)
+                                           const void *key, vuint32_t key_len, int *err)
 {
     unsigned char stack[264];
     unsigned char *hash_key = NULL;
@@ -628,7 +630,8 @@ static struct vedam_lock_object *pin_object(struct vedam_lockdb *db, v_class_id_
  * @param[in] id Argument id
  * @return Result of ensure_attr.
  */
-static vedam_lock_t *ensure_attr(struct vedam_lockdb *db, struct vedam_lock_object *obj, v_attr_id_t id)
+static vedam_lock_t *ensure_attr(struct vedam_lockdb *db, struct vedam_lock_object *obj,
+                                 v_attr_id_t id)
 {
     vedam_lock_t **grown = NULL;
     vedam_lock_t **old = NULL;
@@ -664,7 +667,7 @@ static vedam_lock_t *ensure_attr(struct vedam_lockdb *db, struct vedam_lock_obje
             (void)vedam_lock_destroy(lock);
             return NULL;
         }
-        grown = (vedam_lock_t **)vplatform_calloc(cap, sizeof(*grown));
+        grown = vplatform_calloc(cap, sizeof(*grown));
         if (grown == NULL) {
             (void)vedam_lock_destroy(lock);
             return NULL;
@@ -814,7 +817,7 @@ static int take_locks(struct invoke_args *args)
         return (int)V_STATUS_INVALID_PARAMETER;
     }
     if (args->attr_count > VEDAM_LOCK_ID_STACK) {
-        ids = (v_attr_id_t *)vplatform_calloc(args->attr_count, sizeof(*ids));
+        ids = vplatform_calloc(args->attr_count, sizeof(*ids));
         if (ids == NULL) {
             return (int)V_STATUS_NO_MEMORY;
         }
@@ -878,7 +881,10 @@ static int take_locks(struct invoke_args *args)
 }
 
 /**
- * @brief Run one lock attempt: pin, take locks, and call the body.
+ * @brief Pin, take locks, and run the body once.
+ *
+ * A body that returns VEDAM_LOCK_RESTART ends this attempt so the outer
+ * loop can begin it again.
  * @param[in] args Argument args
  * @return Result of attempt.
  */
@@ -920,7 +926,10 @@ static int attempt(struct invoke_args *args)
 }
 
 /**
- * @brief Join a nested local call into the outer attempt.
+ * @brief Take this call's locks on the attempt already running on this thread.
+ *
+ * VEDAM_LOCK_RETRY means this attempt must die. The caller returns
+ * VEDAM_LOCK_RESTART so the outer loop drops every lock and starts over.
  * @param[in] args Argument args
  * @return Result of nested_invoke.
  */
@@ -957,7 +966,7 @@ v_status_t vedam_lockdb_open(vedam_t *node)
     if (node == NULL) {
         return V_STATUS_INVALID_PARAMETER;
     }
-    db = (struct vedam_lockdb *)vplatform_calloc(1, sizeof(*db));
+    db = vplatform_calloc(1, sizeof(*db));
     if (db == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -1022,7 +1031,12 @@ void vedam_lockdb_close(vedam_t *node)
 }
 
 /**
- * @brief Hold the locks for one local call, run @p body, and release them at depth zero.
+ * @brief Hold the locks for one call, run @p body, and release them at depth zero.
+ *
+ * The first call on this thread starts a Wait-Die attempt and repeats it
+ * when an inner call dies. A call from inside @p body joins that attempt
+ * and takes the locks of the other object. A queue or a network wait does
+ * not belong inside the attempt.
  *
  * @param[in] class_id Argument class_id
  * @param[in] key Argument key
@@ -1036,9 +1050,10 @@ void vedam_lockdb_close(vedam_t *node)
  * @param[in] user Argument user
  * @return Result of vedam_lock_invoke.
  */
-v_status_t vedam_lock_invoke(v_class_id_t class_id, const void *key, vuint32_t key_len, v_verb_t verb,
-                             v_origin_t origin, vuint32_t attr_count, v_attr_t *attr_list,
-                             v_status_t *status_list, vedam_lock_body_fn body, void *user)
+v_status_t vedam_lock_invoke(v_class_id_t class_id, const void *key, vuint32_t key_len,
+                             v_verb_t verb, v_origin_t origin, vuint32_t attr_count,
+                             v_attr_t *attr_list, v_status_t *status_list, vedam_lock_body_fn body,
+                             void *user)
 {
     vedam_t *node = vedam_node();
     struct invoke_args args;

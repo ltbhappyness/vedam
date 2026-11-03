@@ -62,7 +62,7 @@ static int test_via_before_init(void)
     return 0;
 }
 
-int main(void)
+int vedam_legacy_util(void)
 {
     if (test_attr_collapse() != 0) {
         return 1;

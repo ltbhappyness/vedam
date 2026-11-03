@@ -304,7 +304,7 @@ static int test_http_one_socket(void)
  *
  * @return 0 on success, 1 on failure.
  */
-int main(void)
+int vedam_legacy_codec(void)
 {
     if (test_local_skips_codec() != 0) {
         return 1;

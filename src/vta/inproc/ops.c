@@ -45,7 +45,7 @@ static v_status_t inproc_listen(vta_desc_t *desc, const char *address)
     struct inproc_ctx *ctx;
 
     (void)address;
-    ctx = (struct inproc_ctx *)vplatform_calloc(1, sizeof(*ctx));
+    ctx = vplatform_calloc(1, sizeof(*ctx));
     if (ctx == NULL) {
         return V_STATUS_NO_MEMORY;
     }

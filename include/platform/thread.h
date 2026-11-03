@@ -21,18 +21,26 @@ typedef struct vplatform_thread {
 
 /**
  * @brief Start a detached-from-caller joinable thread.
+ *
+ * @param[out] thread Receives the thread handle
+ * @param[in]  entry  Function the new thread runs
+ * @param[in]  arg    Pointer passed to @p entry
  * @return 0 on success, non-zero on failure.
  */
 int vplatform_thread_create(vplatform_thread_t *thread, void *(*entry)(void *), void *arg);
 
 /**
  * @brief Wait for @p thread to finish.
+ *
+ * @param[in,out] thread Thread to join. The handle is released.
  * @return 0 on success, non-zero on failure.
  */
 int vplatform_thread_join(vplatform_thread_t *thread);
 
 /**
  * @brief Detach @p thread so it releases its own resources on exit.
+ *
+ * @param[in,out] thread Thread to detach. The handle is released.
  * @return 0 on success, non-zero on failure.
  */
 int vplatform_thread_detach(vplatform_thread_t *thread);

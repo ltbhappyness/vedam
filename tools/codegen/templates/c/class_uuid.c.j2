@@ -33,8 +33,7 @@ struct vta_uuid_seed {
 static const struct vta_uuid_seed g_uuid_seeds[] = {
 {% for cls in classes %}
 {% for line in cls.uuid_lines %}
-    { vii_{{ cls.class_name }}_uuid[{{ line.major }}][{{ line.minor }}], V_CLASS_{{ cls.class_ident }},
-      {{ line.major }}, {{ line.minor }} },
+    {vii_{{ cls.class_name }}_uuid[{{ line.major }}][{{ line.minor }}], V_CLASS_{{ cls.class_ident }}, {{ line.major }}, {{ line.minor }}},
 {% endfor %}
 {% endfor %}
 };
@@ -85,7 +84,7 @@ v_status_t vta_class_uuid_map_init(void)
         return V_STATUS_SUCCESS;
     }
 
-    hits = (struct vta_uuid_hit *)vplatform_calloc((size_t)VTA_UUID_SEED_COUNT, sizeof(*hits));
+    hits = vplatform_calloc((size_t)VTA_UUID_SEED_COUNT, sizeof(*hits));
     if (hits == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -183,8 +182,7 @@ const uint8_t *vta_class_uuid_bytes(v_class_id_t class_id)
     switch (class_id) {
 {% for cls in classes %}
     case V_CLASS_{{ cls.class_ident }}:
-        return vii_{{ cls.class_name }}_uuid[VII_{{ cls.class_ident }}_MAJOR]
-                                            [VII_{{ cls.class_ident }}_MINOR];
+        return vii_{{ cls.class_name }}_uuid[VII_{{ cls.class_ident }}_MAJOR][VII_{{ cls.class_ident }}_MINOR];
 {% endfor %}
     default:
         return NULL;
@@ -228,7 +226,7 @@ v_status_t vta_class_uuid_string(v_class_id_t class_id, char *out, size_t out_le
  */
 v_status_t vta_class_uuid_parse(const char *str, uint8_t *out)
 {
-    static const int groups[5] = { 8, 4, 4, 4, 12 };
+    static const int groups[5] = {8, 4, 4, 4, 12};
     int gi;
     int bi;
     int i;

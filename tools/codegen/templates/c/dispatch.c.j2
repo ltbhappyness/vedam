@@ -61,8 +61,7 @@ v_status_t vta_dispatch_table_init(vedam_t *node)
         return V_STATUS_INVALID_PARAMETER;
     }
 
-    table = (struct vta_class_verbs *)vplatform_calloc((size_t)V_CLASS_ID_MAX + 1u,
-                                                      sizeof(*table));
+    table = vplatform_calloc((size_t)V_CLASS_ID_MAX + 1u, sizeof(*table));
     if (table == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -73,8 +72,7 @@ v_status_t vta_dispatch_table_init(vedam_t *node)
     table[V_CLASS_{{ cls.class_ident }}].fn[V_VERB_SET] = vii_{{ cls.class_name }}_set;
     table[V_CLASS_{{ cls.class_ident }}].fn[V_VERB_DELETE] = vii_{{ cls.class_name }}_delete;
     table[V_CLASS_{{ cls.class_ident }}].fn[V_VERB_SUBSCRIBE] = vii_{{ cls.class_name }}_subscribe;
-    table[V_CLASS_{{ cls.class_ident }}].fn[V_VERB_UNSUBSCRIBE] =
-        vii_{{ cls.class_name }}_unsubscribe;
+    table[V_CLASS_{{ cls.class_ident }}].fn[V_VERB_UNSUBSCRIBE] = vii_{{ cls.class_name }}_unsubscribe;
     table[V_CLASS_{{ cls.class_ident }}].fn[V_VERB_NOTIFY] = vii_{{ cls.class_name }}_notify;
 {% endfor %}
 
@@ -97,7 +95,14 @@ void vta_dispatch_table_fini(vedam_t *node)
 }
 
 /**
- * @brief Call the vii verb for @p call through the process lock map.
+ * @brief Enter the node for @p call under the Wait-Die lock map.
+ *
+ * Local vi_*, init, and a transport receive that already holds a vi_msg_t
+ * call this. vedam_lock_invoke takes the locks, then the class verb runs.
+ * A library that needs another vertical calls this again with internal
+ * origin. That call joins the attempt already running on the thread. A
+ * Wait-Die die returns VEDAM_LOCK_RESTART and the outermost attempt starts
+ * again. A send uses vta_call after that attempt releases its locks.
  *
  * @param[in,out] call Transport message (class, verb, origin, version, and vi_msg_t)
  * @return The vii status, or V_STATUS_NOT_IMPLEMENTED when the class or verb is unknown.

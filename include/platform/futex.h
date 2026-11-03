@@ -14,6 +14,9 @@
  * @brief Sleep while @p word still equals @p expect.
  *
  * A wake that changes @p word first is not lost. A spurious return is allowed.
+ *
+ * @param[in] word   Word the waiter reads
+ * @param[in] expect Value @p word must still hold
  * @return 0.
  */
 int vplatform_futex_wait(uint32_t *word, uint32_t expect);
@@ -21,6 +24,8 @@ int vplatform_futex_wait(uint32_t *word, uint32_t expect);
 /**
  * @brief Wake up to @p n sleepers blocked in vplatform_futex_wait on @p word.
  *
+ * @param[in] word Word the sleepers wait on
+ * @param[in] n    Maximum number of sleepers to wake
  * @return 0.
  */
 int vplatform_futex_wake(uint32_t *word, int n);

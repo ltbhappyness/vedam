@@ -16,11 +16,19 @@ extern "C" {
 
 /**
  * @brief YAML type kind for @p id, or -1 when the class does not define it.
+ *
+ * @param[in] class_id Class that owns the attribute
+ * @param[in] id       Attribute id
+ * @return The type kind, or -1 when the class does not define @p id.
  */
 int vta_attr_kind(v_class_id_t class_id, v_attr_id_t id);
 
 /**
  * @brief Byte size of a pointer-typed attribute, or 0 when it has none.
+ *
+ * @param[in] class_id Class that owns the attribute
+ * @param[in] id       Attribute id
+ * @return The pointer size in bytes, or 0 when the attribute has no pointer size.
  */
 vuint32_t vta_attr_ptr_size(v_class_id_t class_id, v_attr_id_t id);
 

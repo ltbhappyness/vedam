@@ -10,12 +10,16 @@
 
 /**
  * @brief Detach into the background when @p foreground is zero.
+ *
+ * @param[in] foreground Non-zero to stay in the foreground
  * @return 0 on success, -1 on failure.
  */
 int vplatform_daemonize(int foreground);
 
 /**
  * @brief Process id of this process.
+ *
+ * @return The process id.
  */
 long vplatform_pid(void);
 

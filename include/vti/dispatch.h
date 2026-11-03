@@ -51,7 +51,14 @@ v_status_t vta_dispatch_table_init(struct vedam_node *node);
 void vta_dispatch_table_fini(struct vedam_node *node);
 
 /**
- * @brief Call the vii verb for @p call through the process lock map.
+ * @brief Enter the node for @p call under the Wait-Die lock map.
+ *
+ * Local vi_*, init, and a transport receive that already holds a vi_msg_t
+ * call this. vedam_lock_invoke takes the locks, then the class verb runs.
+ * A library that needs another vertical calls this again with internal
+ * origin. That call joins the attempt already running on the thread. A
+ * Wait-Die die returns VEDAM_LOCK_RESTART and the outermost attempt starts
+ * again. A send uses vta_call after that attempt releases its locks.
  *
  * @param[in,out] call Transport message (class, verb, origin, version, and vi_msg_t)
  * @return The vii status, or V_STATUS_NOT_IMPLEMENTED when the class or verb is unknown.

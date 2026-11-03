@@ -41,16 +41,11 @@ struct vta_uuid_seed {
 };
 
 static const struct vta_uuid_seed g_uuid_seeds[] = {
-    { vii_identity_uuid[1][0], V_CLASS_IDENTITY,
-      1, 0 },
-    { vii_security_uuid[1][0], V_CLASS_SECURITY,
-      1, 0 },
-    { vii_storage_uuid[1][0], V_CLASS_STORAGE,
-      1, 0 },
-    { vii_system_uuid[1][0], V_CLASS_SYSTEM,
-      1, 0 },
-    { vii_wasm_uuid[1][0], V_CLASS_WASM,
-      1, 0 },
+    {vii_identity_uuid[1][0], V_CLASS_IDENTITY, 1, 0},
+    {vii_security_uuid[1][0], V_CLASS_SECURITY, 1, 0},
+    {vii_storage_uuid[1][0], V_CLASS_STORAGE, 1, 0},
+    {vii_system_uuid[1][0], V_CLASS_SYSTEM, 1, 0},
+    {vii_wasm_uuid[1][0], V_CLASS_WASM, 1, 0},
 };
 
 enum { VTA_UUID_SEED_COUNT = (int)(sizeof(g_uuid_seeds) / sizeof(g_uuid_seeds[0])) };
@@ -99,7 +94,7 @@ v_status_t vta_class_uuid_map_init(void)
         return V_STATUS_SUCCESS;
     }
 
-    hits = (struct vta_uuid_hit *)vplatform_calloc((size_t)VTA_UUID_SEED_COUNT, sizeof(*hits));
+    hits = vplatform_calloc((size_t)VTA_UUID_SEED_COUNT, sizeof(*hits));
     if (hits == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -196,20 +191,15 @@ const uint8_t *vta_class_uuid_bytes(v_class_id_t class_id)
 {
     switch (class_id) {
     case V_CLASS_IDENTITY:
-        return vii_identity_uuid[VII_IDENTITY_MAJOR]
-                                            [VII_IDENTITY_MINOR];
+        return vii_identity_uuid[VII_IDENTITY_MAJOR][VII_IDENTITY_MINOR];
     case V_CLASS_SECURITY:
-        return vii_security_uuid[VII_SECURITY_MAJOR]
-                                            [VII_SECURITY_MINOR];
+        return vii_security_uuid[VII_SECURITY_MAJOR][VII_SECURITY_MINOR];
     case V_CLASS_STORAGE:
-        return vii_storage_uuid[VII_STORAGE_MAJOR]
-                                            [VII_STORAGE_MINOR];
+        return vii_storage_uuid[VII_STORAGE_MAJOR][VII_STORAGE_MINOR];
     case V_CLASS_SYSTEM:
-        return vii_system_uuid[VII_SYSTEM_MAJOR]
-                                            [VII_SYSTEM_MINOR];
+        return vii_system_uuid[VII_SYSTEM_MAJOR][VII_SYSTEM_MINOR];
     case V_CLASS_WASM:
-        return vii_wasm_uuid[VII_WASM_MAJOR]
-                                            [VII_WASM_MINOR];
+        return vii_wasm_uuid[VII_WASM_MAJOR][VII_WASM_MINOR];
     default:
         return NULL;
     }
@@ -262,7 +252,7 @@ v_status_t vta_class_uuid_string(v_class_id_t class_id, char *out, size_t out_le
  */
 v_status_t vta_class_uuid_parse(const char *str, uint8_t *out)
 {
-    static const int groups[5] = { 8, 4, 4, 4, 12 };
+    static const int groups[5] = {8, 4, 4, 4, 12};
     int gi;
     int bi;
     int i;

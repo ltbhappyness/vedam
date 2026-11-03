@@ -211,7 +211,7 @@ static int test_two_attrs(void)
     return g_fails;
 }
 
-int main(void)
+int vedam_legacy_lock(void)
 {
     alarm(30);
     if (test_two_classes() != 0) {

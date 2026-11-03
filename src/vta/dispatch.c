@@ -71,8 +71,7 @@ v_status_t vta_dispatch_table_init(vedam_t *node)
         return V_STATUS_INVALID_PARAMETER;
     }
 
-    table = (struct vta_class_verbs *)vplatform_calloc((size_t)V_CLASS_ID_MAX + 1u,
-                                                      sizeof(*table));
+    table = vplatform_calloc((size_t)V_CLASS_ID_MAX + 1u, sizeof(*table));
     if (table == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -82,40 +81,35 @@ v_status_t vta_dispatch_table_init(vedam_t *node)
     table[V_CLASS_IDENTITY].fn[V_VERB_SET] = vii_identity_set;
     table[V_CLASS_IDENTITY].fn[V_VERB_DELETE] = vii_identity_delete;
     table[V_CLASS_IDENTITY].fn[V_VERB_SUBSCRIBE] = vii_identity_subscribe;
-    table[V_CLASS_IDENTITY].fn[V_VERB_UNSUBSCRIBE] =
-        vii_identity_unsubscribe;
+    table[V_CLASS_IDENTITY].fn[V_VERB_UNSUBSCRIBE] = vii_identity_unsubscribe;
     table[V_CLASS_IDENTITY].fn[V_VERB_NOTIFY] = vii_identity_notify;
     table[V_CLASS_SECURITY].fn[V_VERB_CREATE] = vii_security_create;
     table[V_CLASS_SECURITY].fn[V_VERB_GET] = vii_security_get;
     table[V_CLASS_SECURITY].fn[V_VERB_SET] = vii_security_set;
     table[V_CLASS_SECURITY].fn[V_VERB_DELETE] = vii_security_delete;
     table[V_CLASS_SECURITY].fn[V_VERB_SUBSCRIBE] = vii_security_subscribe;
-    table[V_CLASS_SECURITY].fn[V_VERB_UNSUBSCRIBE] =
-        vii_security_unsubscribe;
+    table[V_CLASS_SECURITY].fn[V_VERB_UNSUBSCRIBE] = vii_security_unsubscribe;
     table[V_CLASS_SECURITY].fn[V_VERB_NOTIFY] = vii_security_notify;
     table[V_CLASS_STORAGE].fn[V_VERB_CREATE] = vii_storage_create;
     table[V_CLASS_STORAGE].fn[V_VERB_GET] = vii_storage_get;
     table[V_CLASS_STORAGE].fn[V_VERB_SET] = vii_storage_set;
     table[V_CLASS_STORAGE].fn[V_VERB_DELETE] = vii_storage_delete;
     table[V_CLASS_STORAGE].fn[V_VERB_SUBSCRIBE] = vii_storage_subscribe;
-    table[V_CLASS_STORAGE].fn[V_VERB_UNSUBSCRIBE] =
-        vii_storage_unsubscribe;
+    table[V_CLASS_STORAGE].fn[V_VERB_UNSUBSCRIBE] = vii_storage_unsubscribe;
     table[V_CLASS_STORAGE].fn[V_VERB_NOTIFY] = vii_storage_notify;
     table[V_CLASS_SYSTEM].fn[V_VERB_CREATE] = vii_system_create;
     table[V_CLASS_SYSTEM].fn[V_VERB_GET] = vii_system_get;
     table[V_CLASS_SYSTEM].fn[V_VERB_SET] = vii_system_set;
     table[V_CLASS_SYSTEM].fn[V_VERB_DELETE] = vii_system_delete;
     table[V_CLASS_SYSTEM].fn[V_VERB_SUBSCRIBE] = vii_system_subscribe;
-    table[V_CLASS_SYSTEM].fn[V_VERB_UNSUBSCRIBE] =
-        vii_system_unsubscribe;
+    table[V_CLASS_SYSTEM].fn[V_VERB_UNSUBSCRIBE] = vii_system_unsubscribe;
     table[V_CLASS_SYSTEM].fn[V_VERB_NOTIFY] = vii_system_notify;
     table[V_CLASS_WASM].fn[V_VERB_CREATE] = vii_wasm_create;
     table[V_CLASS_WASM].fn[V_VERB_GET] = vii_wasm_get;
     table[V_CLASS_WASM].fn[V_VERB_SET] = vii_wasm_set;
     table[V_CLASS_WASM].fn[V_VERB_DELETE] = vii_wasm_delete;
     table[V_CLASS_WASM].fn[V_VERB_SUBSCRIBE] = vii_wasm_subscribe;
-    table[V_CLASS_WASM].fn[V_VERB_UNSUBSCRIBE] =
-        vii_wasm_unsubscribe;
+    table[V_CLASS_WASM].fn[V_VERB_UNSUBSCRIBE] = vii_wasm_unsubscribe;
     table[V_CLASS_WASM].fn[V_VERB_NOTIFY] = vii_wasm_notify;
 
     node->verbs = table;
@@ -137,7 +131,14 @@ void vta_dispatch_table_fini(vedam_t *node)
 }
 
 /**
- * @brief Call the vii verb for @p call through the process lock map.
+ * @brief Enter the node for @p call under the Wait-Die lock map.
+ *
+ * Local vi_*, init, and a transport receive that already holds a vi_msg_t
+ * call this. vedam_lock_invoke takes the locks, then the class verb runs.
+ * A library that needs another vertical calls this again with internal
+ * origin. That call joins the attempt already running on the thread. A
+ * Wait-Die die returns VEDAM_LOCK_RESTART and the outermost attempt starts
+ * again. A send uses vta_call after that attempt releases its locks.
  *
  * @param[in,out] call Transport message (class, verb, origin, version, and vi_msg_t)
  * @return The vii status, or V_STATUS_NOT_IMPLEMENTED when the class or verb is unknown.

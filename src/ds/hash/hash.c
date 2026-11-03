@@ -90,13 +90,7 @@ static struct vds_hash_node *find_node(vds_hash_t *table, const void *key, vuint
     struct vds_list *head = &table->bucket[hash & (table->nbucket - 1)];
     struct vds_list *pos;
 
-/**
- * @brief Walk each element in a circular list.
- * @param[in] pos Argument pos
- * @param[in] head Argument head
- * @return Result of vds_list_for_each.
- */
-    vds_list_for_each(pos, head) {
+    vds_list_for_each (pos, head) {
         struct vds_hash_node *node = vds_container_of(pos, struct vds_hash_node, link);
 
         if (key_equal(node, key, key_len, hash)) {
@@ -119,7 +113,7 @@ static v_status_t rehash(vds_hash_t *table, vuint32_t nbucket)
     vuint32_t old_n;
     vuint32_t i;
 
-    bucket = (struct vds_list *)vplatform_calloc(nbucket, sizeof(*bucket));
+    bucket = vplatform_calloc(nbucket, sizeof(*bucket));
     if (bucket == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -134,14 +128,7 @@ static v_status_t rehash(vds_hash_t *table, vuint32_t nbucket)
         struct vds_list *pos;
         struct vds_list *tmp;
 
-/**
- * @brief Walk each element in a circular list while allowing removal.
- * @param[in] pos Argument pos
- * @param[in] tmp Argument tmp
- * @param[in] old[i] Argument old[i]
- * @return Result of vds_list_for_each_safe.
- */
-        vds_list_for_each_safe(pos, tmp, &old[i]) {
+        vds_list_for_each_safe (pos, tmp, &old[i]) {
             struct vds_hash_node *node = vds_container_of(pos, struct vds_hash_node, link);
 
             vds_list_del(pos);
@@ -169,11 +156,11 @@ v_status_t vds_hash_create(vds_hash_t **table, vuint32_t nbucket)
         return V_STATUS_INVALID_PARAMETER;
     }
     n = round_pow2(nbucket);
-    hash = (vds_hash_t *)vplatform_calloc(1, sizeof(*hash));
+    hash = vplatform_calloc(1, sizeof(*hash));
     if (hash == NULL) {
         return V_STATUS_NO_MEMORY;
     }
-    hash->bucket = (struct vds_list *)vplatform_calloc(n, sizeof(*hash->bucket));
+    hash->bucket = vplatform_calloc(n, sizeof(*hash->bucket));
     if (hash->bucket == NULL) {
         vplatform_free(hash);
         return V_STATUS_NO_MEMORY;
@@ -202,14 +189,7 @@ void vds_hash_destroy(vds_hash_t *table)
         struct vds_list *pos;
         struct vds_list *tmp;
 
-/**
- * @brief Walk each element in a circular list while allowing removal.
- * @param[in] pos Argument pos
- * @param[in] tmp Argument tmp
- * @param[in] table->bucket[i] Argument table->bucket[i]
- * @return Result of vds_list_for_each_safe.
- */
-        vds_list_for_each_safe(pos, tmp, &table->bucket[i]) {
+        vds_list_for_each_safe (pos, tmp, &table->bucket[i]) {
             struct vds_hash_node *node = vds_container_of(pos, struct vds_hash_node, link);
 
             vds_list_del(pos);
@@ -253,7 +233,7 @@ v_status_t vds_hash_set(vds_hash_t *table, const void *key, vuint32_t key_len, v
             return rc;
         }
     }
-    node = (struct vds_hash_node *)vplatform_calloc(1, sizeof(*node) + key_len);
+    node = vplatform_calloc(1, sizeof(*node) + key_len);
     if (node == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -325,7 +305,7 @@ struct vds_hash_node *vds_hash_node_make(const void *key, vuint32_t key_len, voi
     if (sizeof(*node) + (size_t)key_len < (size_t)key_len) {
         return NULL;
     }
-    node = (struct vds_hash_node *)vplatform_calloc(1, sizeof(*node) + key_len);
+    node = vplatform_calloc(1, sizeof(*node) + key_len);
     if (node == NULL) {
         return NULL;
     }
@@ -366,7 +346,7 @@ struct vds_list *vds_hash_prepare(vuint32_t nbucket)
     if (nbucket == 0 || (nbucket & (nbucket - 1u)) != 0) {
         return NULL;
     }
-    bucket = (struct vds_list *)vplatform_calloc(nbucket, sizeof(*bucket));
+    bucket = vplatform_calloc(nbucket, sizeof(*bucket));
     if (bucket == NULL) {
         return NULL;
     }
@@ -403,14 +383,7 @@ struct vds_list *vds_hash_swap(vds_hash_t *table, struct vds_list *fresh, vuint3
         struct vds_list *pos;
         struct vds_list *tmp;
 
-/**
- * @brief Walk each element in a circular list while allowing removal.
- * @param[in] pos Argument pos
- * @param[in] tmp Argument tmp
- * @param[in] old[i] Argument old[i]
- * @return Result of vds_list_for_each_safe.
- */
-        vds_list_for_each_safe(pos, tmp, &old[i]) {
+        vds_list_for_each_safe (pos, tmp, &old[i]) {
             struct vds_hash_node *node = vds_container_of(pos, struct vds_hash_node, link);
 
             vds_list_del(pos);

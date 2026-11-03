@@ -21,7 +21,7 @@ int vplatform_thread_create(vplatform_thread_t *thread, void *(*entry)(void *), 
         return -1;
     }
 
-    th = (pthread_t *)malloc(sizeof(*th));
+    th = malloc(sizeof(*th));
     if (th == NULL) {
         return -1;
     }

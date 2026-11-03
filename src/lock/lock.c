@@ -49,7 +49,7 @@ static int holds_add(struct vedam_lock *lock)
 {
     struct hold *hold;
 
-    hold = (struct hold *)vplatform_calloc(1, sizeof(*hold));
+    hold = vplatform_calloc(1, sizeof(*hold));
     if (hold == NULL) {
         return -1;
     }
@@ -115,7 +115,7 @@ v_status_t vedam_lock_group_open(vedam_lock_group_t **group)
     if (rc != WWLOCK_OK) {
         return map_fail(rc);
     }
-    created = (vedam_lock_group_t *)vplatform_calloc(1, sizeof(*created));
+    created = vplatform_calloc(1, sizeof(*created));
     if (created == NULL) {
         wwlock_class_deinit(klass);
         return V_STATUS_NO_MEMORY;
@@ -163,7 +163,7 @@ v_status_t vedam_lock_create(vedam_lock_t **lock, vedam_lock_group_t *group)
     if (rc != WWLOCK_OK) {
         return map_fail(rc);
     }
-    created = (vedam_lock_t *)vplatform_calloc(1, sizeof(*created));
+    created = vplatform_calloc(1, sizeof(*created));
     if (created == NULL) {
         wwlock_deinit(inner);
         return V_STATUS_NO_MEMORY;

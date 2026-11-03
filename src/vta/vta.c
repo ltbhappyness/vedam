@@ -34,7 +34,7 @@ vta_desc_t *vta_open(int link)
         return NULL;
     }
 
-    desc = (vta_desc_t *)vplatform_calloc(1, sizeof(*desc));
+    desc = vplatform_calloc(1, sizeof(*desc));
     if (desc == NULL) {
         return NULL;
     }
@@ -107,6 +107,9 @@ v_status_t vta_connect(vta_desc_t *desc, const char *address)
 
 /**
  * @brief Run one verb on @p desc using a single call/reply message.
+ *
+ * A non-local descriptor is refused while a Wait-Die attempt is held.
+ * The send runs after that attempt releases its locks.
  *
  * @param[in]     desc Transport descriptor
  * @param[in,out] msg  Call and reply message

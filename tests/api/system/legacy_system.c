@@ -273,7 +273,7 @@ static int test_via_rejects(void)
     return 0;
 }
 
-int main(void)
+int vedam_legacy_system(void)
 {
     if (test_origin_gates() != 0) {
         return 1;

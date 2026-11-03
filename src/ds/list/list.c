@@ -21,13 +21,7 @@ vuint32_t vds_list_count(const struct vds_list *head)
     if (head == NULL) {
         return 0;
     }
-/**
- * @brief Walk each element in a circular list.
- * @param[in] pos Argument pos
- * @param[in] head Argument head
- * @return Result of vds_list_for_each.
- */
-    vds_list_for_each(pos, head) {
+    vds_list_for_each (pos, head) {
         count++;
     }
     return count;

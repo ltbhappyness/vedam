@@ -89,27 +89,50 @@ v_status_t vds_hash_del(vds_hash_t *table, const void *key, vuint32_t key_len);
 
 /**
  * @brief Allocate a node that carries a copy of @p key. The caller frees it if it is not inserted.
+ *
+ * @param[in] key     Key bytes
+ * @param[in] key_len Key length
+ * @param[in] value   Caller-owned value. NULL is rejected.
+ * @return The node, or NULL when an argument is rejected or allocation fails.
  */
 struct vds_hash_node *vds_hash_node_make(const void *key, vuint32_t key_len, void *value);
 
 /**
- * @brief Link @p node. Does not allocate. V_STATUS_NO_MEMORY means the table needs a larger bucket array.
+ * @brief Link @p node. Does not allocate.
+ *
+ * V_STATUS_NO_MEMORY means the table needs a larger bucket array.
  * V_STATUS_ITEM_ALREADY_EXISTS leaves @p node unlinked.
+ *
+ * @param[in,out] table Table object
+ * @param[in,out] node  Node to link. Left unlinked when the key is already present.
+ * @return V_STATUS_SUCCESS, V_STATUS_INVALID_PARAMETER, V_STATUS_NO_MEMORY, or
+ * V_STATUS_ITEM_ALREADY_EXISTS.
  */
 v_status_t vds_hash_insert(vds_hash_t *table, struct vds_hash_node *node);
 
 /**
  * @brief Allocate @p nbucket empty lists. @p nbucket must be a power of two.
+ *
+ * @param[in] nbucket Bucket count. Must be a power of two.
+ * @return The bucket array, or NULL when @p nbucket is invalid or allocation fails.
  */
 struct vds_list *vds_hash_prepare(vuint32_t nbucket);
 
 /**
  * @brief Free a bucket array whose chains are empty.
+ *
+ * @param[in] bucket Bucket array from vds_hash_prepare or vds_hash_swap
  */
 void vds_hash_buckets_free(struct vds_list *bucket);
 
 /**
- * @brief Install @p fresh under the caller's lock. Returns the previous array.
+ * @brief Install @p fresh under the caller's lock.
+ *
+ * @param[in,out] table   Table object
+ * @param[in]     fresh   Replacement bucket array
+ * @param[in]     nbucket Bucket count of @p fresh
+ * @param[out]    old_n   Receives the previous bucket count
+ * @return The previous bucket array, or NULL when an argument is missing.
  */
 struct vds_list *vds_hash_swap(vds_hash_t *table, struct vds_list *fresh, vuint32_t nbucket,
                                vuint32_t *old_n);

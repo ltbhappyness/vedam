@@ -194,7 +194,7 @@ static int test_miss_hits(void)
     return g_fails;
 }
 
-int main(void)
+int vedam_legacy_verticals(void)
 {
     if (test_uuids() != 0) {
         return 1;

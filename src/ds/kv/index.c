@@ -27,11 +27,11 @@ v_status_t vds_index_create(vds_index_t **store, vuint32_t capacity)
         return V_STATUS_INVALID_PARAMETER;
     }
     n = capacity == 0 ? VDS_INDEX_MIN : capacity;
-    index = (vds_index_t *)vplatform_calloc(1, sizeof(*index));
+    index = vplatform_calloc(1, sizeof(*index));
     if (index == NULL) {
         return V_STATUS_NO_MEMORY;
     }
-    index->slot = (void **)vplatform_calloc(n, sizeof(*index->slot));
+    index->slot = vplatform_calloc(n, sizeof(*index->slot));
     if (index->slot == NULL) {
         vplatform_free(index);
         return V_STATUS_NO_MEMORY;
@@ -99,7 +99,7 @@ v_status_t vds_index_set(vds_index_t *store, vuint32_t index, void *object)
             }
             capacity <<= 1;
         }
-        slot = (void **)vplatform_calloc(capacity, sizeof(*slot));
+        slot = vplatform_calloc(capacity, sizeof(*slot));
         if (slot == NULL) {
             return V_STATUS_NO_MEMORY;
         }

@@ -42,7 +42,7 @@ v_status_t vds_queue_enqueue(vds_queue_t *queue, void *item)
     if (queue == NULL) {
         return V_STATUS_INVALID_PARAMETER;
     }
-    node = (struct vds_queue_node *)vplatform_calloc(1, sizeof(*node));
+    node = vplatform_calloc(1, sizeof(*node));
     if (node == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -90,14 +90,7 @@ void vds_queue_clear(vds_queue_t *queue)
     if (queue == NULL) {
         return;
     }
-/**
- * @brief Walk each element in a circular list while allowing removal.
- * @param[in] pos Argument pos
- * @param[in] tmp Argument tmp
- * @param[in] queue->head Argument queue->head
- * @return Result of vds_list_for_each_safe.
- */
-    vds_list_for_each_safe(pos, tmp, &queue->head) {
+    vds_list_for_each_safe (pos, tmp, &queue->head) {
         struct vds_queue_node *node = vds_container_of(pos, struct vds_queue_node, link);
 
         vds_list_del(pos);

@@ -10,11 +10,11 @@
  * blocked on the listen queue owns the message, runs the verb, and writes
  * one reply on a reply-send handle opened once and reused.
  */
-#include "vti/dispatch.h"
-#include "vti/mq.h"
 #include "vti/attrwire.h"
 #include "vti/class_uuid.h"
 #include "vti/codec.h"
+#include "vti/dispatch.h"
+#include "vti/mq.h"
 
 #include "meta.h"
 #include "platform/platform.h"
@@ -281,8 +281,8 @@ static int unpack_request(const uint8_t *in, uint32_t in_len, vta_msg_t *msg, ch
  * @param[in,out] ws   Connection-owned codec workspace
  * @return 0 on success, -1 when the message does not fit.
  */
-static int pack_reply(uint32_t req_id, v_status_t st, const vta_msg_t *msg, uint8_t *out, size_t cap,
-                      uint32_t *out_len, vta_codec_ws_t *ws)
+static int pack_reply(uint32_t req_id, v_status_t st, const vta_msg_t *msg, uint8_t *out,
+                      size_t cap, uint32_t *out_len, vta_codec_ws_t *ws)
 {
     size_t body_len;
     size_t hdr_len;
@@ -609,7 +609,7 @@ static v_status_t mq_listen(vta_desc_t *desc, const char *address)
     int rc;
     int i;
 
-    ctx = (struct mq_ctx *)vplatform_calloc(1, sizeof(*ctx));
+    ctx = vplatform_calloc(1, sizeof(*ctx));
     if (ctx == NULL) {
         return V_STATUS_NO_MEMORY;
     }
@@ -629,7 +629,7 @@ static v_status_t mq_listen(vta_desc_t *desc, const char *address)
         }
     }
 
-    ctx->wmem = (struct mq_worker_mem *)vplatform_calloc(VTA_MQ_WORKERS, sizeof(*ctx->wmem));
+    ctx->wmem = vplatform_calloc(VTA_MQ_WORKERS, sizeof(*ctx->wmem));
     if (ctx->wmem == NULL) {
         goto out_free;
     }
@@ -724,7 +724,7 @@ static v_status_t mq_connect(vta_desc_t *desc, const char *address)
     if (address == NULL || address[0] == '\0') {
         return V_STATUS_INVALID_PARAMETER;
     }
-    ctx = (struct mq_ctx *)vplatform_calloc(1, sizeof(*ctx));
+    ctx = vplatform_calloc(1, sizeof(*ctx));
     if (ctx == NULL) {
         return V_STATUS_NO_MEMORY;
     }

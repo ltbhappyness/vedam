@@ -10,6 +10,8 @@
 
 /**
  * @brief Block without spinning until @p timeout_ms elapses or the wait is interrupted.
+ *
+ * @param[in] timeout_ms Milliseconds to block
  */
 void vplatform_sleep_idle(int timeout_ms);
 
