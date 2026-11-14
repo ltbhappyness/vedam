@@ -10,8 +10,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(VEDAM_COVERAGE "Build with gcov instrumentation" OFF)
 
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Install into the build tree" FORCE)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT OR CMAKE_INSTALL_PREFIX STREQUAL "${CMAKE_BINARY_DIR}/install")
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH "Install beside the build tree" FORCE)
 endif()
 
 find_package(Protobuf REQUIRED)
@@ -31,8 +31,7 @@ add_subdirectory(src/va)
 add_subdirectory(src/vta)
 add_subdirectory(src/core)
 
-add_library(vedam)
-target_link_libraries(vedam PUBLIC
+set(vedam_modules
     vedam_platform
     vedam_ds
     vedam_util
@@ -43,13 +42,23 @@ target_link_libraries(vedam PUBLIC
     vedam_vta
     vedam_core
 )
+add_library(vedam STATIC)
+add_library(vedam_shared SHARED)
+set_target_properties(vedam_shared PROPERTIES OUTPUT_NAME vedam)
+target_link_libraries(vedam PUBLIC ${vedam_modules})
+target_link_libraries(vedam PRIVATE wwlock)
+target_link_libraries(vedam_shared PUBLIC ${vedam_modules})
+target_link_libraries(vedam_shared PRIVATE wwlock)
 add_dependencies(vedam vedam_codegen)
+add_dependencies(vedam_shared vedam_codegen)
 
 add_subdirectory(src/vedamd)
 add_subdirectory(examples)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/vi DESTINATION include)
-install(TARGETS vedam vedamd
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/vti/vedam DESTINATION include/vti
+    FILES_MATCHING PATTERN "*.h")
+install(TARGETS vedam vedam_shared vedamd
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin

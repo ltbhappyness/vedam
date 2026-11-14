@@ -1,3 +1,6 @@
 [submodule "proto"]
 	path = proto
 	url = git@github.com:ltbhappyness/vedam-interface.git
+[submodule "third_party/wwlock"]
+	path = third_party/wwlock
+	url = git@github.com:ltbhappyness/wwlock.git

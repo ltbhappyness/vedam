@@ -70,8 +70,14 @@ def folder_rule(rel: str) -> str | None:
     return None
 
 
+# Headers included by name from a third_party include directory. They are not beside the .c file.
+WWLOCK_HEADERS = ("wwlock.h", "wwlock_futex.h")
+
+
 def include_allowed(folder: str, header: str, path: pathlib.Path) -> bool:
     """Return True when @p header may appear in a file of @p folder."""
+    if folder == "src/lock" and header in WWLOCK_HEADERS:
+        return True
     if "/" not in header:
         return (path.parent / header).is_file()
     if folder == "src/vta" and PROTOBUF.match(header):

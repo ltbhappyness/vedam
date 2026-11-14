@@ -15,17 +15,18 @@ Library bodies (`vlib_*`) return success and do not store values yet.
 ```
 model/                   Class and shared-type YAML, and the JSON Schema that checks them
 tools/codegen/           Generator and one Jinja template per output kind
-include/vi/              Public C API (installed)
+include/vi/              In-process C API (installed under install/include/vi)
 include/vii/             Internal contract, including older UUID lines
 include/lib/             vlib_* declarations
 include/core/            Process node
 include/lock/            Wait-Die wrapper
-include/vti/             Transport and protobuf headers (not installed)
+include/vti/             Transport headers; install/include/vti ships the protobuf headers
+third_party/wwlock/      Wait-Die library submodule (MIT). src/lock compiles it
 src/va/                  Public verbs: pointer in, vii_dispatch
 src/via/                 vii_dispatch, the class table, contract checks, then vlib_*
 src/lib/                 Empty vertical bodies
 src/core/core.c          vedam_init / vedam_deinit
-src/lock/                Object and attribute locks
+src/lock/                Object and attribute locks; compiles the wwlock submodule
 src/ds/                  In-memory indexes used by the lock map
 src/vta/inproc/          Local door: caller thread, no pack
 src/vta/mq/              POSIX message queue
@@ -68,7 +69,9 @@ cmake --install build
 ctest --test-dir build --output-on-failure
 ```
 
-Install prefix defaults to `build/install` (`include/vi`, `libvedam`, `vedamd`). Shared library: `cmake -B build -DBUILD_SHARED_LIBS=ON`.
+The install prefix is `install/` beside `build/`. `install/include/vi` is the in-process API. `install/include/vti` is the generated protobuf headers for an IPC or remote peer. `install/lib` holds `libvedam.a` and `libvedam.so`. `install/bin` holds `vedamd`, which links `libvedam.a`. `librt` and `libprotobuf` stay on that link.
+
+`src/lock` adds the `third_party/wwlock` directory. Inside Vedam that directory builds an object library, and linking it places those objects in both Vedam libraries. Built on its own, wwlock is still a static library.
 
 CMake reruns the generator when YAML or templates change. `python3 tools/codegen/generate.py --root . --check` compares the tree with a fresh render and writes nothing.
 
@@ -89,7 +92,7 @@ Queue tests open a POSIX message queue. A restricted sandbox can fail that open 
 ## Run
 
 ```bash
-build/install/bin/vedamd -f
+install/bin/vedamd -f
 ```
 
 Without `-f` the process calls `daemon(3)` and then waits for SIGINT or SIGTERM. `vedam_init` has already started the local, IPC, and remote doors.
