@@ -10,16 +10,15 @@
  * blocked on the listen queue owns the message, runs the verb, and writes
  * one reply on a reply-send handle opened once and reused.
  */
-#include "vti/attrwire.h"
-#include "vti/class_uuid.h"
-#include "vti/codec.h"
-#include "vti/dispatch.h"
 #include "vti/mq.h"
 
-#include "meta.h"
 #include "platform/platform.h"
+#include "util/attr.h"
 #include "util/log.h"
 #include "util/trace.h"
+#include "vii/dispatch.h"
+#include "vti/class_uuid.h"
+#include "vti/codec.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -28,19 +27,20 @@
 #include <string.h>
 #include <unistd.h>
 
+_Static_assert(VTI_CODEC_MAX_ATTR <= 32, "write watch bits cover the server attribute array");
+
 enum {
     VTA_MQ_NAME_MAX = 64,
-    VTA_MQ_BUF_SIZE = VTA_CODEC_BUF_SIZE,
-    VTA_MQ_MAX_ATTR = VTA_CODEC_MAX_ATTR,
+    VTA_MQ_BUF_SIZE = VTI_CODEC_BUF_SIZE,
+    VTA_MQ_MAX_ATTR = VTI_CODEC_MAX_ATTR,
     VTA_MQ_WORKERS = 4,
-    VTA_MQ_VALUE_MAX = VTA_CODEC_VALUE_MAX,
     VTA_MQ_CALL_MS = 5000,
     VTA_MQ_MAGIC_REQ = 0x564d5131u,
     VTA_MQ_MAGIC_REP = 0x564d5152u
 };
 
 struct mq_worker_mem {
-    struct vta_codec_mem codec;
+    struct vti_codec_mem codec;
     uint8_t rx[VTA_MQ_BUF_SIZE];
     uint8_t enc[VTA_MQ_BUF_SIZE];
 };
@@ -65,7 +65,7 @@ struct mq_ctx {
     uint32_t next_id;
     uint8_t enc[VTA_MQ_BUF_SIZE];
     uint8_t dec[VTA_MQ_BUF_SIZE];
-    vta_codec_ws_t *codec;
+    vti_codec_ws_t *codec;
     struct mq_worker_mem *wmem;
     struct mq_worker_arg warg[VTA_MQ_WORKERS];
 };
@@ -125,8 +125,8 @@ static int room_for(size_t used, size_t add, size_t cap)
  * @param[in,out] ws      Connection-owned codec workspace
  * @return 0 on success, -1 when the message does not fit.
  */
-static int pack_request(const vta_msg_t *msg, uint32_t req_id, const char *reply_name, uint8_t *out,
-                        size_t cap, uint32_t *out_len, vta_codec_ws_t *ws)
+static int pack_request(const vii_msg_t *msg, uint32_t req_id, const char *reply_name, uint8_t *out,
+                        size_t cap, uint32_t *out_len, vti_codec_ws_t *ws)
 {
     const uint8_t *uuid;
     const vi_msg_t *vim;
@@ -152,7 +152,7 @@ static int pack_request(const vta_msg_t *msg, uint32_t req_id, const char *reply
     if (name_len == 0 || name_len >= VTA_MQ_NAME_MAX) {
         return -1;
     }
-    uuid = vta_class_uuid_bytes(msg->class_id);
+    uuid = vti_class_uuid_bytes(msg->class_id);
     if (uuid == NULL) {
         return -1;
     }
@@ -163,8 +163,7 @@ static int pack_request(const vta_msg_t *msg, uint32_t req_id, const char *reply
         return -1;
     }
 
-    st = vta_codec_encode(msg->class_id, vim, V_STATUS_SUCCESS, out + hdr_len, cap - hdr_len,
-                          &body_len, ws);
+    st = vti_codec_encode(msg, V_STATUS_SUCCESS, 0, out + hdr_len, cap - hdr_len, &body_len, ws);
     if (st != V_STATUS_SUCCESS) {
         return -1;
     }
@@ -172,7 +171,7 @@ static int pack_request(const vta_msg_t *msg, uint32_t req_id, const char *reply
     put_u32(out + 0, VTA_MQ_MAGIC_REQ);
     put_u32(out + 4, req_id);
     put_u32(out + 8, (uint32_t)msg->verb);
-    vplatform_memcpy(out + 12, uuid, VTA_CLASS_UUID_LEN);
+    vplatform_memcpy(out + 12, uuid, VTI_CLASS_UUID_LEN);
     put_u32(out + 28, (uint32_t)msg->origin);
     put_u32(out + 32, (uint32_t)name_len);
     vplatform_memcpy(out + 36, reply_name, name_len);
@@ -186,32 +185,28 @@ static int pack_request(const vta_msg_t *msg, uint32_t req_id, const char *reply
  *
  * @param[in]  in         Input buffer
  * @param[in]  in_len     Length of @p in
- * @param[out] msg        Transport message (msg->msg arrays already prepared)
+ * @param[out] msg        Transport message (msg->msg prepared by vti_codec_rx_prepare)
  * @param[out] reply_name Reply queue name
  * @param[in]  name_cap   Capacity of @p reply_name
  * @param[out] req_id     Request identifier
- * @param[in,out] ws      Connection-owned codec workspace
- * @param[out] key_buf    Server-side key copy buffer
- * @param[in]  key_cap    Capacity of @p key_buf
+ * @param[out] overall    V_STATUS_SUCCESS, or the first attribute that does not fit its slot
+ * @param[in,out] mem     Worker codec memory
  * @return 0 on success, -2 for an unknown UUID, -1 on a bad frame.
  */
-static int unpack_request(const uint8_t *in, uint32_t in_len, vta_msg_t *msg, char *reply_name,
-                          uint32_t name_cap, uint32_t *req_id, vta_codec_ws_t *ws, uint8_t *key_buf,
-                          size_t key_cap)
+static int unpack_request(const uint8_t *in, uint32_t in_len, vii_msg_t *msg, char *reply_name,
+                          uint32_t name_cap, uint32_t *req_id, v_status_t *overall,
+                          struct vti_codec_mem *mem)
 {
-    uint8_t uuid[VTA_CLASS_UUID_LEN];
-    vi_msg_t *vim;
+    uint8_t uuid[VTI_CLASS_UUID_LEN];
     size_t used;
     uint32_t name_len;
     uint32_t body_len;
     v_status_t st;
-    v_status_t overall;
     int unknown_uuid;
 
-    if (msg == NULL || msg->msg == NULL || ws == NULL) {
+    if (msg == NULL || msg->msg == NULL || mem == NULL || mem->ws == NULL) {
         return -1;
     }
-    vim = msg->msg;
     if (in_len < 40 || get_u32(in) != VTA_MQ_MAGIC_REQ) {
         return -1;
     }
@@ -220,9 +215,9 @@ static int unpack_request(const uint8_t *in, uint32_t in_len, vta_msg_t *msg, ch
     used += 4;
     msg->verb = (v_verb_t)get_u32(in + used);
     used += 4;
-    vplatform_memcpy(uuid, in + used, VTA_CLASS_UUID_LEN);
-    used += VTA_CLASS_UUID_LEN;
-    st = vta_class_from_uuid(uuid, &msg->class_id, &msg->major, &msg->minor);
+    vplatform_memcpy(uuid, in + used, VTI_CLASS_UUID_LEN);
+    used += VTI_CLASS_UUID_LEN;
+    st = vti_class_from_uuid(uuid, &msg->class_id, &msg->major, &msg->minor);
     if (st == V_STATUS_NOT_IMPLEMENTED) {
         unknown_uuid = 1;
         msg->class_id = V_CLASS_UNSPECIFIED;
@@ -258,12 +253,10 @@ static int unpack_request(const uint8_t *in, uint32_t in_len, vta_msg_t *msg, ch
         return -2;
     }
 
-    st = vta_codec_decode(msg->class_id, in + used, body_len, vim, &overall, ws, key_buf, key_cap,
-                          0);
+    st = vti_codec_decode(in + used, body_len, msg, overall, mem->ws, mem);
     if (st != V_STATUS_SUCCESS) {
         return -1;
     }
-    (void)overall;
     return 0;
 }
 
@@ -281,8 +274,8 @@ static int unpack_request(const uint8_t *in, uint32_t in_len, vta_msg_t *msg, ch
  * @param[in,out] ws   Connection-owned codec workspace
  * @return 0 on success, -1 when the message does not fit.
  */
-static int pack_reply(uint32_t req_id, v_status_t st, const vta_msg_t *msg, uint8_t *out,
-                      size_t cap, uint32_t *out_len, vta_codec_ws_t *ws)
+static int pack_reply(uint32_t req_id, v_status_t st, const vii_msg_t *msg, uint8_t *out,
+                      size_t cap, uint32_t *out_len, vti_codec_ws_t *ws)
 {
     size_t body_len;
     size_t hdr_len;
@@ -295,7 +288,7 @@ static int pack_reply(uint32_t req_id, v_status_t st, const vta_msg_t *msg, uint
     if (hdr_len > cap) {
         return -1;
     }
-    rc = vta_codec_encode(msg->class_id, msg->msg, st, out + hdr_len, cap - hdr_len, &body_len, ws);
+    rc = vti_codec_encode(msg, st, 1, out + hdr_len, cap - hdr_len, &body_len, ws);
     if (rc != V_STATUS_SUCCESS) {
         return -1;
     }
@@ -320,7 +313,7 @@ static int pack_reply(uint32_t req_id, v_status_t st, const vta_msg_t *msg, uint
  * @return 0 on success, -1 on a bad frame.
  */
 static int unpack_reply(const uint8_t *in, uint32_t in_len, uint32_t *req_id, v_status_t *st,
-                        vta_msg_t *msg, vta_codec_ws_t *ws)
+                        vii_msg_t *msg, vti_codec_ws_t *ws)
 {
     size_t used;
     uint32_t body_len;
@@ -340,7 +333,7 @@ static int unpack_reply(const uint8_t *in, uint32_t in_len, uint32_t *req_id, v_
     if (!room_for(used, body_len, in_len)) {
         return -1;
     }
-    rc = vta_codec_decode(msg->class_id, in + used, body_len, msg->msg, st, ws, NULL, 0, 1);
+    rc = vti_codec_decode(in + used, body_len, msg, st, ws, NULL);
     if (rc != V_STATUS_SUCCESS) {
         return -1;
     }
@@ -362,8 +355,8 @@ static int unpack_reply(const uint8_t *in, uint32_t in_len, uint32_t *req_id, v_
  * @param[in,out] ws         Connection-owned codec workspace
  */
 static void send_reply(vplatform_mq_t *reply_send, char *open_name, size_t name_cap,
-                       const char *reply_name, uint32_t req_id, v_status_t st, const vta_msg_t *msg,
-                       uint8_t *enc, size_t enc_cap, vta_codec_ws_t *ws)
+                       const char *reply_name, uint32_t req_id, v_status_t st, const vii_msg_t *msg,
+                       uint8_t *enc, size_t enc_cap, vti_codec_ws_t *ws)
 {
     uint32_t len;
     int rc;
@@ -410,7 +403,7 @@ static void *mq_worker(void *arg)
 
     while (__atomic_load_n(&ctx->stop, __ATOMIC_ACQUIRE) == 0) {
         struct pollfd pfd[2];
-        vta_msg_t req;
+        vii_msg_t req;
         vi_msg_t vim;
         uint32_t req_id;
         v_status_t st;
@@ -420,8 +413,7 @@ static void *mq_worker(void *arg)
         int pr;
         int n;
         int rc;
-        int kind;
-        vuint32_t i;
+        int watched = 0;
 
         handle = ctx->mq.handle;
         if (handle < 0 || ctx->wake_r < 0) {
@@ -468,20 +460,10 @@ static void *mq_worker(void *arg)
         }
 
         vplatform_memset(&req, 0, sizeof(req));
-        vplatform_memset(&vim, 0, sizeof(vim));
-        vplatform_memset(wm->codec.attrs, 0, sizeof(wm->codec.attrs));
-        vplatform_memset(wm->codec.statuses, 0, sizeof(wm->codec.statuses));
-        vim.attr_count = VTA_MQ_MAX_ATTR;
-        vim.attr_list = wm->codec.attrs;
-        vim.status_list = wm->codec.statuses;
-        for (i = 0; i < VTA_MQ_MAX_ATTR; i++) {
-            wm->codec.attrs[i].value.ptr = wm->codec.scratch[i];
-            wm->codec.attrs[i].value.text.buf = (char *)wm->codec.scratch[i];
-            wm->codec.attrs[i].value.text.len = 0;
-        }
+        vti_codec_rx_prepare(&wm->codec, &vim);
         req.msg = &vim;
-        rc = unpack_request(wm->rx, (uint32_t)n, &req, reply_name, sizeof(reply_name), &req_id,
-                            wm->codec.ws, wm->codec.key, sizeof(wm->codec.key));
+        rc = unpack_request(wm->rx, (uint32_t)n, &req, reply_name, sizeof(reply_name), &req_id, &st,
+                            &wm->codec);
         if (rc == -2) {
             vim.attr_count = 0;
             vim.attr_list = NULL;
@@ -495,19 +477,17 @@ static void *mq_worker(void *arg)
             continue;
         }
 
-        for (i = 0; i < vim.attr_count; i++) {
-            kind = vta_attr_kind(req.class_id, wm->codec.attrs[i].id);
-            if (kind == VIA_T_PTR) {
-                wm->codec.attrs[i].value.ptr = wm->codec.scratch[i];
-            } else if (kind == VIA_T_TEXT) {
-                wm->codec.attrs[i].value.text.buf = (char *)wm->codec.scratch[i];
-                wm->codec.attrs[i].value.text.len = 0;
-            }
+        if (st == V_STATUS_SUCCESS) {
+            /* The reply encode reads the marks, so the watch stays up through it. */
+            vattr_write_watch(wm->codec.attrs, VTI_CODEC_MAX_ATTR);
+            watched = 1;
+            st = vii_dispatch(&req);
         }
-
-        st = vta_dispatch(&req);
         send_reply(&reply_send, open_reply, sizeof(open_reply), reply_name, req_id, st, &req,
                    wm->enc, sizeof(wm->enc), wm->codec.ws);
+        if (watched) {
+            vattr_write_unwatch();
+        }
     }
 
     if (reply_send.handle >= 0) {
@@ -561,7 +541,7 @@ static void mq_free_workers(struct mq_ctx *ctx)
         return;
     }
     for (i = 0; i < VTA_MQ_WORKERS; i++) {
-        vta_codec_ws_destroy(ctx->wmem[i].codec.ws);
+        vti_codec_ws_destroy(ctx->wmem[i].codec.ws);
         ctx->wmem[i].codec.ws = NULL;
     }
     vplatform_free(ctx->wmem);
@@ -574,7 +554,7 @@ static void mq_free_workers(struct mq_ctx *ctx)
  * @param[in,out] desc Transport descriptor
  * @return V_STATUS_SUCCESS.
  */
-static v_status_t mq_close(vta_desc_t *desc)
+static v_status_t mq_close(vti_desc_t *desc)
 {
     struct mq_ctx *ctx = (struct mq_ctx *)desc->ctx;
 
@@ -587,7 +567,7 @@ static v_status_t mq_close(vta_desc_t *desc)
     } else {
         vplatform_mq_close_send(&ctx->peer);
         vplatform_mq_close(&ctx->reply, ctx->reply_name);
-        vta_codec_ws_destroy(ctx->codec);
+        vti_codec_ws_destroy(ctx->codec);
         ctx->codec = NULL;
     }
     vplatform_free(ctx);
@@ -602,7 +582,7 @@ static v_status_t mq_close(vta_desc_t *desc)
  * @param[in]     address Queue name, or NULL for the per-process default
  * @return V_STATUS_SUCCESS, or a failure code.
  */
-static v_status_t mq_listen(vta_desc_t *desc, const char *address)
+static v_status_t mq_listen(vti_desc_t *desc, const char *address)
 {
     struct mq_ctx *ctx;
     int pipes[2];
@@ -634,7 +614,7 @@ static v_status_t mq_listen(vta_desc_t *desc, const char *address)
         goto out_free;
     }
     for (i = 0; i < VTA_MQ_WORKERS; i++) {
-        ctx->wmem[i].codec.ws = vta_codec_ws_create();
+        ctx->wmem[i].codec.ws = vti_codec_ws_create();
         if (ctx->wmem[i].codec.ws == NULL) {
             goto out_wmem;
         }
@@ -702,7 +682,7 @@ out_free:
  * @param[out] client Unused
  * @return V_STATUS_NOT_IMPLEMENTED.
  */
-static v_status_t mq_accept(vta_desc_t *desc, vta_desc_t **client)
+static v_status_t mq_accept(vti_desc_t *desc, vti_desc_t **client)
 {
     (void)desc;
     (void)client;
@@ -716,7 +696,7 @@ static v_status_t mq_accept(vta_desc_t *desc, vta_desc_t **client)
  * @param[in]     address Peer listen queue name
  * @return V_STATUS_SUCCESS, or a failure code.
  */
-static v_status_t mq_connect(vta_desc_t *desc, const char *address)
+static v_status_t mq_connect(vti_desc_t *desc, const char *address)
 {
     struct mq_ctx *ctx;
     int rc;
@@ -733,7 +713,7 @@ static v_status_t mq_connect(vta_desc_t *desc, const char *address)
     ctx->mq.handle = (intptr_t)-1;
     vplatform_strlcpy(ctx->name, address, sizeof(ctx->name));
 
-    ctx->codec = vta_codec_ws_create();
+    ctx->codec = vti_codec_ws_create();
     if (ctx->codec == NULL) {
         goto out_free;
     }
@@ -755,7 +735,7 @@ static v_status_t mq_connect(vta_desc_t *desc, const char *address)
 out_peer:
     vplatform_mq_close_send(&ctx->peer);
 out_codec:
-    vta_codec_ws_destroy(ctx->codec);
+    vti_codec_ws_destroy(ctx->codec);
     ctx->codec = NULL;
 out_free:
     vplatform_free(ctx);
@@ -772,7 +752,7 @@ out_free:
  * @param[in,out] msg  Call and reply message
  * @return Overall status from the peer, or a local failure code.
  */
-static v_status_t mq_call(vta_desc_t *desc, vta_msg_t *msg)
+static v_status_t mq_call(vti_desc_t *desc, vii_msg_t *msg)
 {
     struct mq_ctx *ctx = (struct mq_ctx *)desc->ctx;
     struct pollfd pfd;
@@ -836,7 +816,7 @@ static v_status_t mq_call(vta_desc_t *desc, vta_msg_t *msg)
  * @param[in] desc Listen descriptor
  * @return Queue name, or NULL when @p desc is not listening.
  */
-const char *vta_mq_bound(vta_desc_t *desc)
+const char *vti_mq_bound(vti_desc_t *desc)
 {
     struct mq_ctx *ctx;
 
@@ -850,7 +830,7 @@ const char *vta_mq_bound(vta_desc_t *desc)
     return ctx->name;
 }
 
-const vta_ops_t vta_mq_ops = {
+const vti_ops_t vti_mq_ops = {
     .close = mq_close,
     .listen = mq_listen,
     .accept = mq_accept,

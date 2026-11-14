@@ -1,0 +1,267 @@
+# Copyright (C) 2026 LTBH Vedam project
+# SPDX-License-Identifier: AGPL-3.0-only
+# A changed copy of Vedam is not called Vedam.
+# An application that only calls Vedam keeps its own license. See LICENSE.
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Vedam class
+description: >-
+  The rule for one file in model/classes/. A class file declares one vertical:
+  its version lines, its enums and structs, which verbs a caller may use, and
+  its attributes. A map keyed by name uses additionalProperties for its value
+  shape. Every other object rejects a key this schema does not name.
+type: object
+additionalProperties: false
+required: [class, singleton, datastore, uuid_lines, verbs, attrs]
+$defs:
+  visibility:
+    description: >-
+      public puts the item in the public C header and the protobuf file.
+      internal keeps it in the internal C header only.
+    enum: [public, internal]
+  c_name:
+    type: string
+    pattern: "^[a-z][a-z0-9_]*$"
+  proto_name:
+    description: >-
+      The protobuf name in this class package. Leave it out to derive it from
+      the C type: drop vi_, drop _t or _e, and use Pascal case. Set it when two
+      derived names would collide.
+    type: string
+    pattern: "^[A-Z][A-Za-z0-9]*$"
+properties:
+  class:
+    description: The class name in lower case. It equals the file stem and a name in types.yaml classes.
+    type: string
+    pattern: "^[a-z][a-z0-9_]*$"
+  singleton:
+    description: >-
+      true when the node holds one object of this class and the caller passes no
+      key. false when each object is named by a key.
+    type: boolean
+  datastore:
+    description: Where the objects live. none keeps them in memory only.
+    enum: [none, kv, git]
+  uuid_lines:
+    description: >-
+      Every supported version line. The 16-byte vertical id is UUID version 5 of
+      class/major/minor/commit under the Vedam namespace. A new line is
+      appended. Dropping support deletes a line.
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [major, minor, commit]
+      properties:
+        major:
+          description: The major version. Each major is its own protobuf package, vedam.<class>.v<major>.
+          type: integer
+          minimum: 1
+        minor:
+          description: The minor version inside that major.
+          type: integer
+          minimum: 0
+        commit:
+          description: >-
+            The full 40-hex commit that opened this line. It is a constant. The
+            generator does not run git to fill it.
+          type: string
+          pattern: "^[0-9a-f]{40}$"
+  enums:
+    description: Enums that belong to this class. Every enum value is a signed 32-bit integer.
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [c_type, prefix, values]
+      properties:
+        c_type:
+          description: The C type name. It starts with vi_<class>_ and ends in _t or _e.
+          $ref: "#/$defs/c_name"
+        prefix:
+          description: The prefix of every C enumerator, in capitals, ending in an underscore.
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]*_$"
+        proto_name:
+          $ref: "#/$defs/proto_name"
+        visibility:
+          $ref: "#/$defs/visibility"
+        values:
+          description: The values. Each number is unique inside the enum and keeps its meaning.
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, value, comment]
+            properties:
+              name:
+                description: The value name in capitals, without the prefix.
+                type: string
+                pattern: "^[A-Z][A-Z0-9_]*$"
+              value:
+                description: The number.
+                type: integer
+                minimum: -2147483648
+                maximum: 2147483647
+              comment:
+                description: One sentence that says what the value means.
+                type: string
+                minLength: 1
+  structs:
+    description: >-
+      Structs that belong to this class. A struct attribute travels as a
+      protobuf message of the same shape, packed in AttrValue.message.
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [c_type, fields]
+      properties:
+        c_type:
+          description: The C type name. It starts with vi_<class>_ and ends in _t.
+          $ref: "#/$defs/c_name"
+        proto_name:
+          $ref: "#/$defs/proto_name"
+        visibility:
+          $ref: "#/$defs/visibility"
+        fields:
+          description: The members in C order.
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [type, name, comment]
+            properties:
+              type:
+                description: A builtin type from types.yaml, or an enum declared in this file.
+                type: string
+                pattern: "^v[a-z0-9_]*_[te]$"
+              name:
+                description: The member name in snake case.
+                $ref: "#/$defs/c_name"
+              count:
+                description: An array length. The member becomes an array in C and repeated on the wire.
+                type: integer
+                minimum: 1
+              wire:
+                description: >-
+                  false keeps the member in C only. The protobuf message skips it
+                  and the receiver writes zero. The default is true.
+                type: boolean
+              comment:
+                description: One sentence that says what the member holds.
+                type: string
+                minLength: 1
+  verbs:
+    description: >-
+      Every verb in types.yaml, keyed by its name. visibility says whether a
+      caller outside the node may use it.
+    type: object
+    propertyNames:
+      pattern: "^[a-z][a-z0-9_]*$"
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [visibility, comment]
+      properties:
+        visibility:
+          $ref: "#/$defs/visibility"
+        stream:
+          description: >-
+            true when the reply is a stream. The protobuf service declares the
+            method as a server stream.
+          type: boolean
+        comment:
+          description: One sentence that says what the verb does for this class.
+          type: string
+          minLength: 1
+  attrs:
+    description: >-
+      The attributes, keyed by name in capitals. The name becomes
+      VI_<CLASS>_ATTR_<NAME> and VII_<CLASS>_ATTR_<NAME>.
+    type: object
+    minProperties: 1
+    propertyNames:
+      pattern: "^[A-Z][A-Z0-9_]*$"
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [id, type, visibility, comment]
+      properties:
+        id:
+          description: >-
+            The attribute id, unique in this class. It keeps its meaning and is
+            not reused. Promoting an attribute to public keeps the number.
+          type: integer
+          minimum: 1
+          maximum: 254
+        type:
+          description: >-
+            A builtin type from types.yaml, or an enum or struct in this file.
+            The kind follows from the type. An enum type checks membership on
+            every write. With list, this is the type of one item.
+          type: string
+          pattern: "^v[a-z0-9_]*_[te]$"
+        list:
+          description: >-
+            Makes the attribute a list of items of its type. The kind is LIST.
+            Any type except v_text_t may be an item. range and enum membership
+            apply to every item. max_count times the size of one item must fit
+            one value slot of 256 bytes, the room a transport keeps per attribute.
+          type: object
+          additionalProperties: false
+          required: [max_count]
+          properties:
+            max_count:
+              description: The most items a write may carry, and the room a transport keeps on get.
+              type: integer
+              minimum: 1
+        visibility:
+          $ref: "#/$defs/visibility"
+        flags_public:
+          description: Flags shown to a caller outside the node. Names come from types.yaml attr_flags.
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: "^[A-Z][A-Z0-9_]*$"
+        flags_internal:
+          description: >-
+            Flags the node enforces. Leave it out to reuse flags_public. Names
+            come from types.yaml attr_flags.
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: "^[A-Z][A-Z0-9_]*$"
+        range:
+          description: >-
+            The inclusive bounds a written value must meet. Only an integer kind
+            may carry a range, and min is not above max. Both bounds are signed
+            64-bit, so a U64 value above 9223372036854775807 is outside every
+            range.
+          type: object
+          additionalProperties: false
+          required: [min, max]
+          properties:
+            min:
+              description: The lowest value accepted.
+              type: integer
+            max:
+              description: The highest value accepted.
+              type: integer
+        max_len:
+          description: >-
+            The longest text in bytes a write may carry. Only a TEXT attribute
+            may set it. It must fit one value slot of 256 bytes, the room a
+            transport keeps per attribute.
+          type: integer
+          minimum: 1
+        comment:
+          description: >-
+            Sentences for the next reader: what the value means and, for a
+            pointer, what the caller passes.
+          type: string
+          minLength: 1

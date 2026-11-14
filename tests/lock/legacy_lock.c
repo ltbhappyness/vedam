@@ -8,15 +8,15 @@
  * Two classes lock through the local transport in opposite order, and two
  * system attributes are read together.
  */
-#include "core/core.h"
+#include "core/node.h"
 #include "lock/store.h"
-#include "vii/class/identity.h"
-#include "vii/class/storage.h"
-#include "vti/dispatch.h"
 #include "vi/class/identity.h"
 #include "vi/class/storage.h"
 #include "vi/class/system.h"
 #include "vi/vedam.h"
+#include "vii/class/identity.h"
+#include "vii/class/storage.h"
+#include "vii/dispatch.h"
 
 #include <pthread.h>
 #include <sched.h>
@@ -70,7 +70,7 @@ static v_status_t cross_body(void *user)
     }
     {
         vi_msg_t vim;
-        vta_msg_t call;
+        vii_msg_t call;
         v_status_t status;
 
         memset(&status, 0, sizeof(status));
@@ -87,7 +87,7 @@ static v_status_t cross_body(void *user)
         call.major = major;
         call.minor = minor;
         call.msg = &vim;
-        st = vta_dispatch(&call);
+        st = vii_dispatch(&call);
     }
     return st;
 }

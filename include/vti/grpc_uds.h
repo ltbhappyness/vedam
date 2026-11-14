@@ -8,8 +8,8 @@
 #ifndef VTI_GRPC_UDS_H
 #define VTI_GRPC_UDS_H
 
-#include "vii/types.h"
+#include "vti/vti.h"
 
-extern const vta_ops_t vta_grpc_uds_ops;
+extern const vti_ops_t vti_grpc_uds_ops;
 
 #endif

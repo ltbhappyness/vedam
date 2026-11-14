@@ -7,12 +7,13 @@
  *
  * System class: init lifecycle, public get/subscribe, VIA rejects, origin gates.
  */
-#include "core/core.h"
+#include "core/node.h"
 #include "vi/class/system.h"
 #include "vi/vedam.h"
 #include "vii/class/system.h"
+#include "vii/meta.h"
 #include "vti/mq.h"
-#include "vti/vta.h"
+#include "vti/vti.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -23,13 +24,35 @@ static int fail(const char *msg, v_status_t rc)
     return 1;
 }
 
+/**
+ * @brief Run @p verb on the System row the way a caller with @p origin would.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     verb   Verb
+ * @param[in,out] vim    Call message
+ * @return The verb status.
+ */
+static v_status_t system_verb(v_origin_t origin, v_verb_t verb, vi_msg_t *vim)
+{
+    vii_msg_t call;
+
+    memset(&call, 0, sizeof(call));
+    call.class_id = V_CLASS_SYSTEM;
+    call.origin = origin;
+    call.verb = verb;
+    call.major = VII_SYSTEM_MAJOR;
+    call.minor = VII_SYSTEM_MINOR;
+    call.msg = vim;
+    return vii_verb(&vii_classes[V_CLASS_SYSTEM], &call);
+}
+
 static int test_origin_gates(void)
 {
     vi_msg_t vim;
     v_status_t rc;
 
     memset(&vim, 0, sizeof(vim));
-    rc = vii_system_create(V_ORIGIN_EXTERNAL, VII_SYSTEM_MAJOR, VII_SYSTEM_MINOR, &vim);
+    rc = system_verb(V_ORIGIN_EXTERNAL, V_VERB_CREATE, &vim);
     if (rc != V_STATUS_NOT_IMPLEMENTED) {
         return fail("external create", rc);
     }
@@ -39,13 +62,13 @@ static int test_origin_gates(void)
         return fail("init for origin", rc);
     }
 
-    rc = vii_system_set(V_ORIGIN_EXTERNAL, VII_SYSTEM_MAJOR, VII_SYSTEM_MINOR, &vim);
+    rc = system_verb(V_ORIGIN_EXTERNAL, V_VERB_SET, &vim);
     if (rc != V_STATUS_NOT_IMPLEMENTED) {
         vedam_deinit();
         return fail("external set", rc);
     }
 
-    rc = vii_system_delete(V_ORIGIN_EXTERNAL, VII_SYSTEM_MAJOR, VII_SYSTEM_MINOR, &vim);
+    rc = system_verb(V_ORIGIN_EXTERNAL, V_VERB_DELETE, &vim);
     if (rc != V_STATUS_NOT_IMPLEMENTED) {
         vedam_deinit();
         return fail("external delete", rc);
@@ -121,27 +144,27 @@ static int test_public_get(void)
     }
 
     {
-        vta_desc_t *tx;
-        vta_msg_t msg;
+        vti_desc_t *tx;
+        vii_msg_t msg;
         vi_msg_t one_vim;
         v_attr_t one;
         v_status_t one_st;
         const char *qname;
 
-        tx = vta_open(VTA_LINK_IPC);
+        tx = vti_open(VTI_LINK_IPC);
         if (tx == NULL) {
             vedam_deinit();
             return fail("mq open", V_STATUS_NO_MEMORY);
         }
-        qname = vta_mq_bound(vedam_node()->rx[VTA_LINK_IPC]);
+        qname = vti_mq_bound(vedam_node()->rx[VTI_LINK_IPC]);
         if (qname == NULL) {
-            vta_close(tx);
+            vti_close(tx);
             vedam_deinit();
             return fail("mq bound", V_STATUS_FAILURE);
         }
-        rc = vta_connect(tx, qname);
+        rc = vti_connect(tx, qname);
         if (rc != V_STATUS_SUCCESS) {
-            vta_close(tx);
+            vti_close(tx);
             vedam_deinit();
             return fail("mq connect", rc);
         }
@@ -159,18 +182,18 @@ static int test_public_get(void)
         msg.major = VII_SYSTEM_MAJOR;
         msg.minor = VII_SYSTEM_MINOR;
         msg.msg = &one_vim;
-        rc = vta_call(tx, &msg);
+        rc = vti_call(tx, &msg);
         if (rc != V_STATUS_SUCCESS) {
-            vta_close(tx);
+            vti_close(tx);
             vedam_deinit();
             return fail("mq get", rc);
         }
         if (one_st != V_STATUS_SUCCESS) {
-            vta_close(tx);
+            vti_close(tx);
             vedam_deinit();
             return fail("mq get status_list", one_st);
         }
-        vta_close(tx);
+        vti_close(tx);
     }
 
     memset(attrs, 0, sizeof(attrs[0]));

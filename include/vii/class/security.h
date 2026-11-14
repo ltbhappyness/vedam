@@ -18,6 +18,29 @@ extern "C" {
 #endif
 
 /**
+ * @brief Every security attribute identifier, public and internal.
+ *
+ * A public id has the same number as in vi/class/security.h.
+ */
+typedef enum _vii_security_attr_t {
+    VII_SECURITY_ATTR_UNSPECIFIED = 0,
+    /**
+     * @brief Active security profile for this process.
+     * @type vint32_t
+     * @kind S32
+     * @flags READ_ONLY
+     */
+    VII_SECURITY_ATTR_PROFILE = 1,
+    /**
+     * @brief State of the security singleton.
+     * @type vint32_t
+     * @kind S32
+     * @flags READ_ONLY | SUBSCRIBABLE
+     */
+    VII_SECURITY_ATTR_STATE = 2,
+} vii_security_attr_t;
+
+/**
  * @brief Highest major index for a supported security UUID line.
  */
 enum { VII_SECURITY_UUID_MAJOR_MAX = 1 };
@@ -43,104 +66,31 @@ enum { VII_SECURITY_MINOR = 0 };
  * A slot with no YAML line is left zero. The public header keeps only the latest
  * line; this table is for the library and the edge map.
  */
-static const uint8_t vii_security_uuid[VII_SECURITY_UUID_MAJOR_MAX + 1]
-                                            [VII_SECURITY_UUID_MINOR_MAX + 1]
-                                            [16] = {
+static const uint8_t vii_security_uuid[][VII_SECURITY_UUID_MINOR_MAX + 1][16] = {
     {
-        { 0 },
+        {0},
     },
     {
-        { 0x3d, 0x8d, 0x56, 0x23, 0x8c, 0xa8, 0x58, 0x5f, 0xa4, 0x34, 0x66, 0x4c, 0x1d, 0xf3, 0x8f, 0xfa },
+        {
+            0x3d,
+            0x8d,
+            0x56,
+            0x23,
+            0x8c,
+            0xa8,
+            0x58,
+            0x5f,
+            0xa4,
+            0x34,
+            0x66,
+            0x4c,
+            0x1d,
+            0xf3,
+            0x8f,
+            0xfa,
+        },
     },
 };
-
-/**
- * @brief Internal verbs for security. Attribute ids live in vi/class/security.h.
- */
-
-/**
- * @brief Create the security object. Origin must be internal.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message (key and attributes)
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_security_create(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                       vi_msg_t *msg);
-
-/**
- * @brief Fill attribute values after contract checks.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status after the contract checks.
- */
-v_status_t vii_security_get(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                    vi_msg_t *msg);
-
-/**
- * @brief Change attributes that allow set. Origin must be internal.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_security_set(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                    vi_msg_t *msg);
-
-/**
- * @brief Tear down the security object. Origin must be internal.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message (key only)
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_security_delete(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                       vi_msg_t *msg);
-
-/**
- * @brief Watch SUBSCRIBABLE attributes.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status after the contract checks.
- */
-v_status_t vii_security_subscribe(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                          vi_msg_t *msg);
-
-/**
- * @brief Stop watches for the same attribute id list.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status.
- */
-v_status_t vii_security_unsubscribe(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                            vi_msg_t *msg);
-
-/**
- * @brief Push changed attributes to current subscribers.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_security_notify(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                       vi_msg_t *msg);
 
 #ifdef __cplusplus
 }

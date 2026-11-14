@@ -26,15 +26,15 @@
 #include <unistd.h>
 
 struct grpc_ctx {
-    struct vta_http_pool pool;
+    struct vti_http_pool pool;
     int fd;
     int running;
     int connected;
     unsigned tcp_connects;
     char bind[128];
-    uint8_t enc[VTA_CODEC_BUF_SIZE];
-    uint8_t http_io[VTA_HTTP_IO_MAX];
-    vta_codec_ws_t *codec;
+    uint8_t enc[VTI_CODEC_BUF_SIZE];
+    uint8_t http_io[VTI_HTTP_IO_MAX];
+    vti_codec_ws_t *codec;
 };
 
 /**
@@ -43,7 +43,7 @@ struct grpc_ctx {
  * @param[in,out] desc Transport descriptor
  * @return V_STATUS_SUCCESS.
  */
-static v_status_t grpc_close(vta_desc_t *desc)
+static v_status_t grpc_close(vti_desc_t *desc)
 {
     struct grpc_ctx *c = (struct grpc_ctx *)desc->ctx;
     int i;
@@ -52,10 +52,10 @@ static v_status_t grpc_close(vta_desc_t *desc)
         return V_STATUS_SUCCESS;
     }
     if (c->running) {
-        vta_http_pool_stop(&c->pool);
+        vti_http_pool_stop(&c->pool);
         c->running = 0;
-        for (i = 0; i < VTA_HTTP_WORKERS; i++) {
-            vta_codec_ws_destroy(c->pool.slot[i].codec.ws);
+        for (i = 0; i < VTI_HTTP_WORKERS; i++) {
+            vti_codec_ws_destroy(c->pool.slot[i].codec.ws);
             c->pool.slot[i].codec.ws = NULL;
         }
     }
@@ -63,11 +63,11 @@ static v_status_t grpc_close(vta_desc_t *desc)
         if (c->connected) {
             close(c->fd);
         } else {
-            vta_grpc_unbind(c->fd, NULL);
+            vti_grpc_unbind(c->fd, NULL);
         }
         c->fd = -1;
     }
-    vta_codec_ws_destroy(c->codec);
+    vti_codec_ws_destroy(c->codec);
     c->codec = NULL;
     vplatform_free(c);
     desc->ctx = NULL;
@@ -81,7 +81,7 @@ static v_status_t grpc_close(vta_desc_t *desc)
  * @param[in]     address Bind address
  * @return V_STATUS_SUCCESS, or a failure code.
  */
-static v_status_t grpc_listen(vta_desc_t *desc, const char *address)
+static v_status_t grpc_listen(vti_desc_t *desc, const char *address)
 {
     struct grpc_ctx *c;
     int rc;
@@ -100,17 +100,17 @@ static v_status_t grpc_listen(vta_desc_t *desc, const char *address)
     vtrace_enter();
     vplatform_strlcpy(c->bind, address, sizeof(c->bind));
 
-    c->fd = vta_grpc_bind_tcp(c->bind, c->bind, sizeof(c->bind));
+    c->fd = vti_grpc_bind_tcp(c->bind, c->bind, sizeof(c->bind));
     if (c->fd < 0) {
         goto out_free;
     }
 
-    rc = vta_http_pool_start(&c->pool, c->fd);
+    rc = vti_http_pool_start(&c->pool, c->fd);
     if (rc != 0) {
         goto out_unbind;
     }
-    for (i = 0; i < VTA_HTTP_WORKERS; i++) {
-        c->pool.slot[i].codec.ws = vta_codec_ws_create();
+    for (i = 0; i < VTI_HTTP_WORKERS; i++) {
+        c->pool.slot[i].codec.ws = vti_codec_ws_create();
         if (c->pool.slot[i].codec.ws == NULL) {
             goto out_pool;
         }
@@ -121,13 +121,13 @@ static v_status_t grpc_listen(vta_desc_t *desc, const char *address)
     return V_STATUS_SUCCESS;
 
 out_pool:
-    for (i = 0; i < VTA_HTTP_WORKERS; i++) {
-        vta_codec_ws_destroy(c->pool.slot[i].codec.ws);
+    for (i = 0; i < VTI_HTTP_WORKERS; i++) {
+        vti_codec_ws_destroy(c->pool.slot[i].codec.ws);
         c->pool.slot[i].codec.ws = NULL;
     }
-    vta_http_pool_stop(&c->pool);
+    vti_http_pool_stop(&c->pool);
 out_unbind:
-    vta_grpc_unbind(c->fd, NULL);
+    vti_grpc_unbind(c->fd, NULL);
     c->fd = -1;
 out_free:
     vplatform_free(c);
@@ -142,7 +142,7 @@ out_free:
  * @param[out] client Unused
  * @return V_STATUS_NOT_IMPLEMENTED.
  */
-static v_status_t grpc_accept(vta_desc_t *desc, vta_desc_t **client)
+static v_status_t grpc_accept(vti_desc_t *desc, vti_desc_t **client)
 {
     (void)desc;
     (void)client;
@@ -242,7 +242,7 @@ static v_status_t grpc_tcp_connect(struct grpc_ctx *c)
  * @param[in]     address Host:port string
  * @return V_STATUS_SUCCESS, or a failure code.
  */
-static v_status_t grpc_connect(vta_desc_t *desc, const char *address)
+static v_status_t grpc_connect(vti_desc_t *desc, const char *address)
 {
     struct grpc_ctx *c;
     v_status_t st;
@@ -258,7 +258,7 @@ static v_status_t grpc_connect(vta_desc_t *desc, const char *address)
     c->fd = -1;
     vplatform_strlcpy(c->bind, address, sizeof(c->bind));
 
-    c->codec = vta_codec_ws_create();
+    c->codec = vti_codec_ws_create();
     if (c->codec == NULL) {
         vplatform_free(c);
         return V_STATUS_NO_MEMORY;
@@ -266,7 +266,7 @@ static v_status_t grpc_connect(vta_desc_t *desc, const char *address)
 
     st = grpc_tcp_connect(c);
     if (st != V_STATUS_SUCCESS) {
-        vta_codec_ws_destroy(c->codec);
+        vti_codec_ws_destroy(c->codec);
         vplatform_free(c);
         return st;
     }
@@ -284,12 +284,12 @@ static v_status_t grpc_connect(vta_desc_t *desc, const char *address)
  * @param[in,out] msg  Call and reply message
  * @return Overall status from the peer, or a local failure code.
  */
-static v_status_t grpc_call(vta_desc_t *desc, vta_msg_t *msg)
+static v_status_t grpc_call(vti_desc_t *desc, vii_msg_t *msg)
 {
     struct grpc_ctx *c;
     const char *verb_name;
     const uint8_t *resp;
-    char uuid_str[40];
+    const char *service;
     size_t enc_len;
     size_t frame_len;
     size_t resp_len;
@@ -308,34 +308,34 @@ static v_status_t grpc_call(vta_desc_t *desc, vta_msg_t *msg)
         return V_STATUS_INVALID_PARAMETER;
     }
 
-    verb_name = vta_codec_verb_name(msg->verb);
+    verb_name = vti_codec_verb_name(msg->verb);
     if (verb_name == NULL) {
         return V_STATUS_NOT_IMPLEMENTED;
     }
 
-    st = vta_class_uuid_string(msg->class_id, uuid_str, sizeof(uuid_str));
+    service = vti_service_name(msg->class_id, msg->major);
+    if (service == NULL) {
+        return V_STATUS_NOT_IMPLEMENTED;
+    }
+
+    st = vti_codec_encode(msg, V_STATUS_SUCCESS, 0, c->enc + 5, sizeof(c->enc) - 5u, &enc_len,
+                          c->codec);
     if (st != V_STATUS_SUCCESS) {
         return st;
     }
 
-    st = vta_codec_encode(msg->class_id, msg->msg, V_STATUS_SUCCESS, c->enc + 5,
-                          sizeof(c->enc) - 5u, &enc_len, c->codec);
+    st = vti_codec_grpc_frame(c->enc, sizeof(c->enc), enc_len, &frame_len);
     if (st != V_STATUS_SUCCESS) {
         return st;
     }
 
-    st = vta_codec_grpc_frame(c->enc, sizeof(c->enc), enc_len, &frame_len);
-    if (st != V_STATUS_SUCCESS) {
-        return st;
-    }
-
-    st = vta_grpc_http_exchange(c->fd, uuid_str, verb_name, c->enc, frame_len, &resp, &resp_len,
+    st = vti_grpc_http_exchange(c->fd, service, verb_name, c->enc, frame_len, &resp, &resp_len,
                                 c->http_io, sizeof(c->http_io));
     if (st != V_STATUS_SUCCESS) {
         return st;
     }
 
-    st = vta_codec_decode(msg->class_id, resp, resp_len, msg->msg, &overall, c->codec, NULL, 0, 1);
+    st = vti_codec_decode(resp, resp_len, msg, &overall, c->codec, NULL);
     if (st != V_STATUS_SUCCESS) {
         return st;
     }
@@ -348,7 +348,7 @@ static v_status_t grpc_call(vta_desc_t *desc, vta_msg_t *msg)
  * @param[in] desc Listen descriptor
  * @return Bound address, or NULL.
  */
-const char *vta_grpc_bound(vta_desc_t *desc)
+const char *vti_grpc_bound(vti_desc_t *desc)
 {
     struct grpc_ctx *c;
 
@@ -368,7 +368,7 @@ const char *vta_grpc_bound(vta_desc_t *desc)
  * @param[in] desc Connected remote descriptor
  * @return Connect count, or 0 when @p desc is not a connected client.
  */
-unsigned vta_grpc_tcp_connects(vta_desc_t *desc)
+unsigned vti_grpc_tcp_connects(vti_desc_t *desc)
 {
     struct grpc_ctx *c;
 
@@ -382,7 +382,7 @@ unsigned vta_grpc_tcp_connects(vta_desc_t *desc)
     return c->tcp_connects;
 }
 
-const vta_ops_t vta_grpc_ops = {
+const vti_ops_t vti_grpc_ops = {
     .close = grpc_close,
     .listen = grpc_listen,
     .accept = grpc_accept,

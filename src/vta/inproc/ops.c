@@ -7,7 +7,7 @@
  *
  * The caller's thread is the connection. There is no accept thread.
  */
-#include "vti/dispatch.h"
+#include "vii/dispatch.h"
 #include "vti/inproc.h"
 
 #include "platform/platform.h"
@@ -24,7 +24,7 @@ struct inproc_ctx {
  * @param[in] desc Transport descriptor
  * @return V_STATUS_SUCCESS.
  */
-static v_status_t inproc_close(vta_desc_t *desc)
+static v_status_t inproc_close(vti_desc_t *desc)
 {
     vtrace_enter();
     vplatform_free(desc->ctx);
@@ -40,7 +40,7 @@ static v_status_t inproc_close(vta_desc_t *desc)
  * @param[in] address Unused for in-process
  * @return V_STATUS_SUCCESS or V_STATUS_NO_MEMORY.
  */
-static v_status_t inproc_listen(vta_desc_t *desc, const char *address)
+static v_status_t inproc_listen(vti_desc_t *desc, const char *address)
 {
     struct inproc_ctx *ctx;
 
@@ -62,7 +62,7 @@ static v_status_t inproc_listen(vta_desc_t *desc, const char *address)
  * @param[out] client Unused
  * @return V_STATUS_NOT_IMPLEMENTED.
  */
-static v_status_t inproc_accept(vta_desc_t *desc, vta_desc_t **client)
+static v_status_t inproc_accept(vti_desc_t *desc, vti_desc_t **client)
 {
     (void)desc;
     (void)client;
@@ -76,7 +76,7 @@ static v_status_t inproc_accept(vta_desc_t *desc, vta_desc_t **client)
  * @param[in] address Unused for in-process
  * @return V_STATUS_SUCCESS or V_STATUS_NO_MEMORY.
  */
-static v_status_t inproc_connect(vta_desc_t *desc, const char *address)
+static v_status_t inproc_connect(vti_desc_t *desc, const char *address)
 {
     (void)address;
     desc->ctx = vplatform_calloc(1, sizeof(struct inproc_ctx));
@@ -87,19 +87,19 @@ static v_status_t inproc_connect(vta_desc_t *desc, const char *address)
 }
 
 /**
- * @brief Serve @p msg on the local door through vta_dispatch.
+ * @brief Serve @p msg on the local door through vii_dispatch.
  *
  * @param[in]     desc Transport descriptor
  * @param[in,out] msg  Call and reply message
  * @return The dispatch status.
  */
-static v_status_t inproc_call(vta_desc_t *desc, vta_msg_t *msg)
+static v_status_t inproc_call(vti_desc_t *desc, vii_msg_t *msg)
 {
     (void)desc;
-    return vta_dispatch(msg);
+    return vii_dispatch(msg);
 }
 
-const vta_ops_t vta_inproc_ops = {
+const vti_ops_t vti_inproc_ops = {
     .close = inproc_close,
     .listen = inproc_listen,
     .accept = inproc_accept,

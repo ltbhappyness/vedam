@@ -8,8 +8,8 @@
 #ifndef VTI_INPROC_H
 #define VTI_INPROC_H
 
-#include "vii/types.h"
+#include "vti/vti.h"
 
-extern const vta_ops_t vta_inproc_ops;
+extern const vti_ops_t vti_inproc_ops;
 
 #endif

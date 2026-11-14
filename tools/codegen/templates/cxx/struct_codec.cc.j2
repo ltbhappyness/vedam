@@ -1,0 +1,147 @@
+{{ generated_c }}
+#include "vti/codec.h"
+
+#include <google/protobuf/any.pb.h>
+#include <google/protobuf/arena.h>
+
+#include "platform/memory.h"
+{% for cls in classes if cls.structs %}
+#include "{{ package }}/{{ cls.name }}/v{{ cls.latest.major }}/{{ cls.name }}.pb.h"
+#include "vii/class/{{ cls.name }}.h"
+{% endfor %}
+
+static_assert(VTI_CODEC_VALUE_MAX == {{ value_slot_bytes }},
+              "the model checks text and list bounds against this slot size");
+{% for s in structs %}
+
+static_assert(sizeof({{ s.name }}) <= VTI_CODEC_VALUE_MAX,
+              "{{ s.name }} must fit one codec value slot");
+{% endfor %}
+{% for cls in classes %}
+{% for a in cls.attrs if a.is_list %}
+
+static_assert({{ a.max_count }} * {{ a.elem_size_expr }} <= VTI_CODEC_VALUE_MAX,
+              "{{ cls.name }} {{ a.name }} must fit one codec value slot");
+{% endfor %}
+{% endfor %}
+{% macro put_field(f) %}
+{% set td = f.typedef %}
+{% if td.form == "enum" %}
+{% set expr = "static_cast<" ~ td.cxx_message ~ ">(src->" ~ f.name ~ ("[i]" if f.count else "") ~ ")" %}
+{% elif td.kind.name == "BOOL" %}
+{% set expr = "src->" ~ f.name ~ ("[i]" if f.count else "") ~ " != 0" %}
+{% else %}
+{% set expr = "src->" ~ f.name ~ ("[i]" if f.count else "") %}
+{% endif %}
+{% if f.count %}
+    for (i = 0; i < {{ f.count }}; i++) {
+{% if td.kind.name == "VERSION" %}
+        msg->add_{{ f.name }}()->set_major({{ expr }}.major);
+        msg->mutable_{{ f.name }}(i)->set_minor({{ expr }}.minor);
+{% else %}
+        msg->add_{{ f.name }}({{ expr }});
+{% endif %}
+    }
+{% elif td.kind.name == "VERSION" %}
+    msg->mutable_{{ f.name }}()->set_major({{ expr }}.major);
+    msg->mutable_{{ f.name }}()->set_minor({{ expr }}.minor);
+{% else %}
+    msg->set_{{ f.name }}({{ expr }});
+{% endif %}
+{% endmacro %}
+{% macro take_field(f) %}
+{% set td = f.typedef %}
+{% if td.form == "enum" %}
+{% set cast_open = "static_cast<" ~ td.name ~ ">(" %}
+{% set cast_close = ")" %}
+{% elif td.kind.name == "BOOL" %}
+{% set cast_open = "static_cast<vbool_t>(" %}
+{% set cast_close = " ? 1 : 0)" %}
+{% else %}
+{% set cast_open = "" %}
+{% set cast_close = "" %}
+{% endif %}
+{% if f.count %}
+    for (i = 0; i < {{ f.count }} && i < msg->{{ f.name }}_size(); i++) {
+{% if td.kind.name == "VERSION" %}
+        dst->{{ f.name }}[i].major = msg->{{ f.name }}(i).major();
+        dst->{{ f.name }}[i].minor = msg->{{ f.name }}(i).minor();
+{% else %}
+        dst->{{ f.name }}[i] = {{ cast_open }}msg->{{ f.name }}(i){{ cast_close }};
+{% endif %}
+    }
+{% elif td.kind.name == "VERSION" %}
+    dst->{{ f.name }}.major = msg->{{ f.name }}().major();
+    dst->{{ f.name }}.minor = msg->{{ f.name }}().minor();
+{% else %}
+    dst->{{ f.name }} = {{ cast_open }}msg->{{ f.name }}(){{ cast_close }};
+{% endif %}
+{% endmacro %}
+
+namespace
+{
+{% for s in structs %}
+{% set counted = s.wire_fields | selectattr("count") | list %}
+
+/**
+ * @brief Pack the {{ s.name }} at @p c into @p dst as {{ s.proto_name }}.
+ *
+ * The message is built on the arena that owns @p dst.
+ *
+ * @param[in]  c   C struct
+ * @param[out] dst Any inside a workspace message
+ * @return V_STATUS_SUCCESS, or V_STATUS_FAILURE when the message cannot be packed.
+ */
+v_status_t put_{{ s.name }}(const void *c, google::protobuf::Any *dst)
+{
+    const {{ s.name }} *src = static_cast<const {{ s.name }} *>(c);
+    {{ s.cxx_message }} *msg =
+        google::protobuf::Arena::CreateMessage<{{ s.cxx_message }}>(dst->GetArena());
+{% if counted %}
+    int i;
+{% endif %}
+
+{% for f in s.wire_fields %}
+{{ put_field(f) }}
+{%- endfor %}
+    return dst->PackFrom(*msg) ? V_STATUS_SUCCESS : V_STATUS_FAILURE;
+}
+
+/**
+ * @brief Unpack {{ s.proto_name }} from @p src into the {{ s.name }} at @p c.
+ *
+ * Members that do not travel are written zero.
+ *
+ * @param[in]  src Any inside a workspace message
+ * @param[out] c   C struct
+ * @return V_STATUS_SUCCESS, or V_STATUS_INVALID_PARAMETER when @p src holds another message.
+ */
+v_status_t take_{{ s.name }}(const google::protobuf::Any &src, void *c)
+{
+    {{ s.name }} *dst = static_cast<{{ s.name }} *>(c);
+    {{ s.cxx_message }} *msg =
+        google::protobuf::Arena::CreateMessage<{{ s.cxx_message }}>(src.GetArena());
+{% if counted %}
+    int i;
+{% endif %}
+
+    if (!src.UnpackTo(msg)) {
+        return V_STATUS_INVALID_PARAMETER;
+    }
+    vplatform_memset(dst, 0, sizeof(*dst));
+{% for f in s.wire_fields %}
+{{ take_field(f) }}
+{%- endfor %}
+    return V_STATUS_SUCCESS;
+}
+{% endfor %}
+
+} // namespace
+
+const struct vti_struct_codec vti_struct_codecs[] = {
+{% for s in structs %}
+    {put_{{ s.name }}, take_{{ s.name }}},
+{% else %}
+    {nullptr, nullptr},
+{% endfor %}
+};

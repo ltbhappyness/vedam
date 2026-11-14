@@ -1,51 +1,52 @@
 {{ generated_c }}
-#ifndef VI_CLASS_{{ class_ident }}_H
-#define VI_CLASS_{{ class_ident }}_H
+#ifndef VI_CLASS_{{ cls.ident }}_H
+#define VI_CLASS_{{ cls.ident }}_H
 
 #include "vi/types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-{% for e in enums %}
+{% for e in cls.enums %}
 
 /**
- * @brief {{ e.c_type }} values for the {{ class_name }} class.
+ * @brief {{ e.name }} values for the {{ cls.name }} class.
  */
-typedef enum _{{ e.c_type }} {
+typedef enum _{{ e.name }} {
 {% for v in e["values"] %}
-    {{ e.prefix }}{{ v.name }} = {{ v.value }}, /**< {{ v.comment }} */
+    {{ v.c_name }} = {{ v.value }}, /**< {{ v.comment }} */
 {% endfor %}
-} {{ e.c_type }};
+} {{ e.name }};
 {% endfor %}
-{% for s in structs %}
+{% for s in cls.structs %}
 
 /**
- * @brief {{ s.c_type }} for the {{ class_name }} class.
+ * @brief {{ s.name }} for the {{ cls.name }} class.
  */
-typedef struct _{{ s.c_type }} {
-{% for f in s["fields"] %}
-    {{ f.type }} {{ f.name }};
+typedef struct _{{ s.name }} {
+{% for f in s.fields %}
+    {{ f.c_decl }}; /**< {{ f.comment }} */
 {% endfor %}
-} {{ s.c_type }};
+} {{ s.name }};
 {% endfor %}
 
 /**
- * @brief Attribute identifiers for {{ class_name }}.
+ * @brief Attribute identifiers for {{ cls.name }}.
  *
  * Public attributes only.
  */
-typedef enum _vi_{{ class_name }}_attr_t {
-    VI_{{ class_ident }}_ATTR_UNSPECIFIED = 0,
-{% for a in public_attrs %}
+typedef enum _vi_{{ cls.name }}_attr_t {
+    VI_{{ cls.ident }}_ATTR_UNSPECIFIED = 0,
+{% for a in cls.public_attrs %}
     /**
      * @brief {{ a.comment }}
-     * @type {{ a.type }}
-     * @flags {{ a.flags_public_doc }}
-     */
-    VI_{{ class_ident }}_ATTR_{{ a.name }} = {{ a.id }},
+{% for tag, text in a.docs("public") %}
+     * @{{ tag }} {{ text }}
 {% endfor %}
-} vi_{{ class_name }}_attr_t;
+     */
+    VI_{{ cls.ident }}_ATTR_{{ a.name }} = {{ a.id }},
+{% endfor %}
+} vi_{{ cls.name }}_attr_t;
 
 /**
  * @brief Public id for this vertical (16 bytes).
@@ -55,52 +56,25 @@ typedef enum _vi_{{ class_name }}_attr_t {
  * major.minor line; a later line does not rewrite it. A hyphenated form for logs
  * or HTTP is derived from these bytes when a message leaves this process.
  */
-static const uint8_t vi_{{ class_name }}_uuid[16] = { {{ uuid_c_array }} };
-{% for name in public_verbs %}
-{% if name == "get" %}
+static const uint8_t vi_{{ cls.name }}_uuid[16] = {
+    {{ cls.latest.c_array }},
+};
+{% for v in cls.public_verbs %}
 
 /**
- * @brief Fill the values for the attribute ids in the message.
- *
- * The caller sets each id. For a state attribute the caller sets value.ptr.
- * Duplicate ids keep the last entry. A singleton sets key to NULL and key_len
- * to 0. When attr_count is greater than zero, both attr_list and status_list
- * must be set. Each status_list entry is written; the overall return is success
- * only when every entry is success.
+ * @brief {{ v.verb.doc_brief }}
+{% for line in v.verb.doc_body %}
+ *{{ " " ~ line if line else "" }}
+{% endfor %}
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
-v_status_t vi_{{ class_name }}_get(vi_msg_t *msg);
-{% elif name == "subscribe" %}
-
-/**
- * @brief Register a watch for attributes marked subscribable. This call returns once.
- *
- * A singleton sets key to NULL and key_len to 0. When attr_count is greater
- * than zero, both attr_list and status_list must be set.
- *
- * @param[in,out] msg Call message
- * @return The local-transport status.
- */
-v_status_t vi_{{ class_name }}_subscribe(vi_msg_t *msg);
-{% elif name == "unsubscribe" %}
-
-/**
- * @brief Stop watches for the same caller. An empty list stops every watch.
- *
- * A singleton sets key to NULL and key_len to 0. When attr_count is greater
- * than zero, both attr_list and status_list must be set.
- *
- * @param[in,out] msg Call message
- * @return The local-transport status.
- */
-v_status_t vi_{{ class_name }}_unsubscribe(vi_msg_t *msg);
-{% endif %}
+v_status_t vi_{{ cls.name }}_{{ v.verb.name }}(vi_msg_t *msg);
 {% endfor %}
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* VI_CLASS_{{ class_ident }}_H */
+#endif /* VI_CLASS_{{ cls.ident }}_H */

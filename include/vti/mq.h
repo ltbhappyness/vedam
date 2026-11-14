@@ -8,13 +8,13 @@
 #ifndef VTI_MQ_H
 #define VTI_MQ_H
 
-#include "vii/types.h"
+#include "vti/vti.h"
 
-extern const vta_ops_t vta_mq_ops;
+extern const vti_ops_t vti_mq_ops;
 
 /**
  * @brief Queue name the listening descriptor bound, or NULL.
  */
-const char *vta_mq_bound(vta_desc_t *desc);
+const char *vti_mq_bound(vti_desc_t *desc);
 
 #endif

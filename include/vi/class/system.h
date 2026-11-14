@@ -44,8 +44,8 @@ typedef enum _vi_system_state_e {
  * @brief vi_system_state_t for the system class.
  */
 typedef struct _vi_system_state_t {
-    vi_system_state_e operational;
-    vuint32_t reserved[8];
+    vi_system_state_e operational; /**< Where the process is in its life. */
+    vuint32_t reserved[8]; /**< Kept zero by the node. */
 } vi_system_state_t;
 
 /**
@@ -58,6 +58,7 @@ typedef enum _vi_system_attr_t {
     /**
      * @brief Role of this process. A is archive, B is full validator, C is a light operator, D is a small gateway, E is a thin web client.
      * @type vi_system_node_class_t
+     * @values vi_system_node_class_t
      * @flags READ_ONLY
      */
     VI_SYSTEM_ATTR_NODE_CLASS = 1,
@@ -76,6 +77,7 @@ typedef enum _vi_system_attr_t {
     /**
      * @brief Commit of the running build, for a person to read. Not an input to the vertical UUID.
      * @type v_text_t
+     * @get Set len to the room in buf. On overflow len holds the needed length.
      * @flags READ_ONLY
      */
     VI_SYSTEM_ATTR_RELEASE_COMMIT = 4,
@@ -89,7 +91,9 @@ typedef enum _vi_system_attr_t {
  * major.minor line; a later line does not rewrite it. A hyphenated form for logs
  * or HTTP is derived from these bytes when a message leaves this process.
  */
-static const uint8_t vi_system_uuid[16] = { 0xc2, 0xb9, 0x15, 0x80, 0x60, 0x92, 0x5c, 0x64, 0xbd, 0x0c, 0xea, 0x7f, 0x37, 0x7b, 0x56, 0xc1 };
+static const uint8_t vi_system_uuid[16] = {
+    0xc2, 0xb9, 0x15, 0x80, 0x60, 0x92, 0x5c, 0x64, 0xbd, 0x0c, 0xea, 0x7f, 0x37, 0x7b, 0x56, 0xc1,
+};
 
 /**
  * @brief Fill the values for the attribute ids in the message.
@@ -101,7 +105,7 @@ static const uint8_t vi_system_uuid[16] = { 0xc2, 0xb9, 0x15, 0x80, 0x60, 0x92, 
  * only when every entry is success.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_system_get(vi_msg_t *msg);
 
@@ -112,7 +116,7 @@ v_status_t vi_system_get(vi_msg_t *msg);
  * than zero, both attr_list and status_list must be set.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_system_subscribe(vi_msg_t *msg);
 
@@ -123,7 +127,7 @@ v_status_t vi_system_subscribe(vi_msg_t *msg);
  * than zero, both attr_list and status_list must be set.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_system_unsubscribe(vi_msg_t *msg);
 

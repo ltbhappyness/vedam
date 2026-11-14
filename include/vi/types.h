@@ -37,27 +37,43 @@ typedef vuint32_t v_attr_id_t;
  * @brief Status codes returned by Vedam verbs.
  */
 typedef enum _v_status_t {
-    V_STATUS_SUCCESS                =    0, /**< The call completed and any output buffers are valid. */
-    V_STATUS_FAILURE                =   -1, /**< The call failed for a reason not covered by a more specific code. Discard outputs. */
-    V_STATUS_NOT_SUPPORTED          =   -2, /**< This build or origin does not support the verb or attribute. Discard outputs. */
-    V_STATUS_NO_MEMORY              =   -3, /**< A buffer could not be allocated. Retry later or use a smaller list. */
-    V_STATUS_INVALID_PARAMETER      =   -4, /**< A pointer, count, or length is not usable. Fix the arguments and retry. */
-    V_STATUS_ITEM_ALREADY_EXISTS    =   -5, /**< Create was asked for an object that already exists. */
-    V_STATUS_ITEM_NOT_FOUND         =   -6, /**< Read, set, or delete named an object that does not exist. */
-    V_STATUS_BUFFER_OVERFLOW        =   -7, /**< A caller-supplied buffer is too small. The needed length is written when the type allows it. */
-    V_STATUS_MANDATORY_ATTR_MISSING =   -8, /**< Create lacked an attribute that must be present. Add it and retry. */
-    V_STATUS_UNINITIALIZED          =   -9, /**< vedam_init has not completed, or vedam_deinit has already run. */
-    V_STATUS_NOT_IMPLEMENTED        =  -10, /**< The verb exists in the header but this origin or slice must not call it. */
-    V_STATUS_FAILED_PRECONDITION    =  -11, /**< The object exists but is not in a state that allows this verb. */
-    V_STATUS_CAPABILITY_DENIED      =  -12, /**< The caller is not allowed to use this verb or attribute. */
-    V_STATUS_OFFLINE                =  -13, /**< The path needs a network or peer that is not reachable. */
-    V_STATUS_THERMAL_SHED           =  -14, /**< The device is too hot or too busy. Retry after a wait. */
-    V_STATUS_OBJECT_IN_USE          =  -15, /**< Delete or set cannot proceed while another call holds the object. */
-    V_STATUS_INVALID_ATTR_VALUE_0   = -100, /**< An attribute value is not valid. Add the zero-based index of that attribute in the list to this code. */
-    V_STATUS_ATTR_NOT_IMPLEMENTED_0 = -200, /**< An attribute id is known but not implemented. Add the zero-based index of that attribute in the list to this code. */
-    V_STATUS_UNKNOWN_ATTRIBUTE_0    = -300, /**< An attribute id is not defined for this class. Add the zero-based index of that attribute in the list to this code. */
-    V_STATUS_ATTR_NOT_SUPPORTED_0   = -400, /**< The origin may not use this attribute on this verb. Add the zero-based index of that attribute in the list to this code. */
-    V_STATUS_INVALID_ATTR_ID_0      = -500, /**< An attribute id is out of range. Add the zero-based index of that attribute in the list to this code. */
+    V_STATUS_SUCCESS = 0, /**< The call completed and any output buffers are valid. */
+    V_STATUS_FAILURE =
+        -1, /**< The call failed for a reason not covered by a more specific code. Discard outputs. */
+    V_STATUS_NOT_SUPPORTED =
+        -2, /**< This build or origin does not support the verb or attribute. Discard outputs. */
+    V_STATUS_NO_MEMORY =
+        -3, /**< A buffer could not be allocated. Retry later or use a smaller list. */
+    V_STATUS_INVALID_PARAMETER =
+        -4, /**< A pointer, count, or length is not usable. Fix the arguments and retry. */
+    V_STATUS_ITEM_ALREADY_EXISTS = -5, /**< Create was asked for an object that already exists. */
+    V_STATUS_ITEM_NOT_FOUND = -6, /**< Read, set, or delete named an object that does not exist. */
+    V_STATUS_BUFFER_OVERFLOW =
+        -7, /**< A caller-supplied buffer is too small. The needed length is written when the type allows it. */
+    V_STATUS_MANDATORY_ATTR_MISSING =
+        -8, /**< Create lacked an attribute that must be present. Add it and retry. */
+    V_STATUS_UNINITIALIZED =
+        -9, /**< vedam_init has not completed, or vedam_deinit has already run. */
+    V_STATUS_NOT_IMPLEMENTED =
+        -10, /**< The verb exists in the header but this origin or slice must not call it. */
+    V_STATUS_FAILED_PRECONDITION =
+        -11, /**< The object exists but is not in a state that allows this verb. */
+    V_STATUS_CAPABILITY_DENIED =
+        -12, /**< The caller is not allowed to use this verb or attribute. */
+    V_STATUS_OFFLINE = -13, /**< The path needs a network or peer that is not reachable. */
+    V_STATUS_THERMAL_SHED = -14, /**< The device is too hot or too busy. Retry after a wait. */
+    V_STATUS_OBJECT_IN_USE =
+        -15, /**< Delete or set cannot proceed while another call holds the object. */
+    V_STATUS_INVALID_ATTR_VALUE_0 =
+        -100, /**< An attribute value is not valid. Add the zero-based index of that attribute in the list to this code. */
+    V_STATUS_ATTR_NOT_IMPLEMENTED_0 =
+        -200, /**< An attribute id is known but not implemented. Add the zero-based index of that attribute in the list to this code. */
+    V_STATUS_UNKNOWN_ATTRIBUTE_0 =
+        -300, /**< An attribute id is not defined for this class. Add the zero-based index of that attribute in the list to this code. */
+    V_STATUS_ATTR_NOT_SUPPORTED_0 =
+        -400, /**< The origin may not use this attribute on this verb. Add the zero-based index of that attribute in the list to this code. */
+    V_STATUS_INVALID_ATTR_ID_0 =
+        -500, /**< An attribute id is out of range. Add the zero-based index of that attribute in the list to this code. */
 } v_status_t;
 
 /**
@@ -69,36 +85,31 @@ typedef struct _v_version_t {
 } v_version_t;
 
 /**
- * @brief Contiguous byte list.
- */
-typedef struct _v_u8_list_t {
-    vuint32_t count;
-    vuint8_t *list;
-} v_u8_list_t;
-
-/**
- * @brief Contiguous unsigned 32-bit list.
- */
-typedef struct _v_u32_list_t {
-    vuint32_t count;
-    vuint32_t *list;
-} v_u32_list_t;
-
-/**
- * @brief Contiguous signed 32-bit list.
- */
-typedef struct _v_s32_list_t {
-    vuint32_t count;
-    vint32_t *list;
-} v_s32_list_t;
-
-/**
  * @brief UTF-8 text with explicit length.
+ *
+ * On get the caller points @p buf at its buffer and sets @p len to the room in
+ * it. The reply sets @p len to the bytes written. When the text does not fit,
+ * that attribute's status is V_STATUS_BUFFER_OVERFLOW, nothing is copied, and
+ * @p len holds the needed length.
  */
 typedef struct _v_text_t {
     vuint32_t len;
     char *buf;
 } v_text_t;
+
+/**
+ * @brief Items of one type, laid out one after another, with a count.
+ *
+ * The attribute names the item type. On get the caller points @p items at its
+ * array and sets @p count to the room in it. The reply sets @p count to the
+ * items written. When the list does not fit, that attribute's status is
+ * V_STATUS_BUFFER_OVERFLOW, nothing is copied, and @p count holds the needed
+ * number.
+ */
+typedef struct _v_list_t {
+    vuint32_t count;
+    void *items;
+} v_list_t;
 
 /**
  * @brief Attribute value payload. The active member depends on the attribute type.
@@ -115,9 +126,7 @@ typedef union _v_attr_value_t {
     vint64_t s64;
     v_version_t version;
     v_text_t text;
-    v_u8_list_t u8list;
-    v_u32_list_t u32list;
-    v_s32_list_t s32list;
+    v_list_t list;
     void *ptr;
 } v_attr_value_t;
 
@@ -153,7 +162,9 @@ typedef struct _vi_msg_t {
  * version-5 UUID. Another author may use that recipe with their own domain, or
  * may publish sixteen bytes produced another way.
  */
-static const uint8_t vi_namespace_uuid[16] = { 0x04, 0xd4, 0xb1, 0xcf, 0x54, 0xb6, 0x53, 0xb2, 0x82, 0x81, 0x5a, 0xf9, 0xb0, 0x4a, 0x66, 0x66 };
+static const uint8_t vi_namespace_uuid[16] = {
+    0x04, 0xd4, 0xb1, 0xcf, 0x54, 0xb6, 0x53, 0xb2, 0x82, 0x81, 0x5a, 0xf9, 0xb0, 0x4a, 0x66, 0x66,
+};
 
 #ifdef __cplusplus
 }

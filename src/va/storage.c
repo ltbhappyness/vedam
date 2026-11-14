@@ -9,18 +9,17 @@
  */
 #include "vi/class/storage.h"
 #include "vii/class/storage.h"
-
-#include "vti/dispatch.h"
+#include "vii/dispatch.h"
 
 /**
- * @brief Public get for storage. Enters vii through the local transport.
+ * @brief Build the internal get call for storage and dispatch it.
  *
  * @param[in,out] msg Call message
- * @return The vii status.
+ * @return The dispatch status.
  */
 v_status_t vi_storage_get(vi_msg_t *msg)
 {
-    vta_msg_t call;
+    vii_msg_t call;
 
     if (msg == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -31,18 +30,18 @@ v_status_t vi_storage_get(vi_msg_t *msg)
     call.major = VII_STORAGE_MAJOR;
     call.minor = VII_STORAGE_MINOR;
     call.msg = msg;
-    return vta_dispatch(&call);
+    return vii_dispatch(&call);
 }
 
 /**
- * @brief Public subscribe for storage. Enters vii through the local transport.
+ * @brief Build the internal subscribe call for storage and dispatch it.
  *
  * @param[in,out] msg Call message
- * @return The vii status.
+ * @return The dispatch status.
  */
 v_status_t vi_storage_subscribe(vi_msg_t *msg)
 {
-    vta_msg_t call;
+    vii_msg_t call;
 
     if (msg == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -53,18 +52,18 @@ v_status_t vi_storage_subscribe(vi_msg_t *msg)
     call.major = VII_STORAGE_MAJOR;
     call.minor = VII_STORAGE_MINOR;
     call.msg = msg;
-    return vta_dispatch(&call);
+    return vii_dispatch(&call);
 }
 
 /**
- * @brief Public unsubscribe for storage. Enters vii through the local transport.
+ * @brief Build the internal unsubscribe call for storage and dispatch it.
  *
  * @param[in,out] msg Call message
- * @return The vii status.
+ * @return The dispatch status.
  */
 v_status_t vi_storage_unsubscribe(vi_msg_t *msg)
 {
-    vta_msg_t call;
+    vii_msg_t call;
 
     if (msg == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -75,5 +74,5 @@ v_status_t vi_storage_unsubscribe(vi_msg_t *msg)
     call.major = VII_STORAGE_MAJOR;
     call.minor = VII_STORAGE_MINOR;
     call.msg = msg;
-    return vta_dispatch(&call);
+    return vii_dispatch(&call);
 }

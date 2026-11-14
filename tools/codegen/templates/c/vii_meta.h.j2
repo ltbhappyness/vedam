@@ -1,0 +1,150 @@
+{{ generated_c }}
+#ifndef VII_META_H
+#define VII_META_H
+
+#include "vii/types.h"
+
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief Attribute contract flags, one bit each.
+ */
+enum {
+{% for f in flags %}
+    {{ f.c_ident }} = 1u << {{ f.bit }}{{ "," if not loop.last }} /**< {{ f.comment }} */
+{% endfor %}
+};
+
+/**
+ * @brief Value kinds. Every attribute type resolves to one kind.
+ */
+enum {
+{% for k in kinds %}
+    {{ k.c_ident }} = {{ k.index }}{{ "," if not loop.last }} /**< {{ k.comment }} */
+{% endfor %}
+};
+
+/**
+ * @brief Library body for one verb of one class.
+ *
+ * @param[in]     major Vertical major from the UUID line
+ * @param[in]     minor Vertical minor from the UUID line
+ * @param[in,out] msg   Call message
+ * @return The library status.
+ */
+typedef v_status_t (*vii_body_fn)(vuint32_t major, vuint32_t minor, vi_msg_t *msg);
+
+/**
+ * @brief One attribute row: identity, contract flags, kind, and the limits a write must meet.
+ *
+ * For VII_T_LIST, @p elem_kind, @p range, and @p values describe one item, and a
+ * struct item uses @p struct_index and @p size.
+ */
+struct vii_attr_meta {
+    v_attr_id_t id;
+    vuint16_t flags; /**< VII_F_* bits. */
+    vuint8_t kind; /**< VII_T_* kind. */
+    vuint8_t is_public; /**< Non-zero when an external origin may name this id. */
+    vuint8_t has_range; /**< Non-zero when @p min and @p max apply. */
+    vuint8_t struct_index; /**< Index into the struct codec table, for a struct value or item. */
+    vuint8_t elem_kind; /**< VII_T_* kind of one item for VII_T_LIST, otherwise 0. */
+    vuint32_t size; /**< Bytes of one struct value or item, otherwise 0. */
+    vuint32_t elem_size; /**< Bytes of one item for VII_T_LIST, otherwise 0. */
+    vuint32_t max_len; /**< Longest text a write may carry, or 0 for no limit. */
+    vuint32_t max_count; /**< Most items a write may carry for VII_T_LIST, otherwise 0. */
+    vuint32_t value_count; /**< Entries in @p values. */
+    vint64_t min; /**< Lowest integer a write may carry. */
+    vint64_t max; /**< Highest integer a write may carry. */
+    const vint32_t *values; /**< Enum values a write may carry, or NULL. */
+};
+
+/**
+ * @brief What one verb does to the attribute list before the body runs.
+ */
+struct vii_verb_rule {
+    vuint8_t collapse; /**< Keep only the last entry for a repeated id. */
+    vuint8_t checks_list; /**< Check the list; otherwise only the message is required. */
+    vuint8_t writes_values; /**< The caller sends values, so range, enum, and length apply. */
+};
+
+/**
+ * @brief The rule for every verb, indexed by v_verb_t.
+ */
+extern const struct vii_verb_rule vii_verb_rules[V_VERB_COUNT];
+
+/**
+ * @brief One class: the attribute index, the rows, the external verbs, and the bodies.
+ */
+struct vii_class {
+    const vuint8_t *attr_by_id; /**< attr_by_id[id] is row + 1, or 0 when unknown. */
+    const struct vii_attr_meta *attrs;
+    vuint32_t attr_id_max;
+    vuint32_t external_verbs; /**< Bit per verb an external origin may call. */
+    vii_body_fn body[V_VERB_COUNT];
+    vuint32_t attr_count;
+    vuint8_t singleton; /**< Non-zero when the class holds one object and no key. */
+};
+
+/**
+ * @brief Every class on this node, indexed by class id. Slot 0 is all zero.
+ */
+extern const struct vii_class vii_classes[V_CLASS_ID_MAX + 1];
+
+/**
+ * @brief Return the row for @p id in @p cls, or NULL when the class does not define it.
+ *
+ * @param[in] cls Class row
+ * @param[in] id  Attribute id
+ * @return The attribute row, or NULL.
+ */
+static inline const struct vii_attr_meta *vii_attr_lookup(const struct vii_class *cls,
+                                                          v_attr_id_t id)
+{
+    vuint8_t row;
+
+    if (cls->attr_by_id == NULL || id > cls->attr_id_max) {
+        return NULL;
+    }
+    row = cls->attr_by_id[id];
+    if (row == 0) {
+        return NULL;
+    }
+    return &cls->attrs[row - 1];
+}
+
+/**
+ * @brief Check every attribute in @p msg for @p verb from @p origin.
+ *
+ * Writes every status_list entry and returns the first failure. When every
+ * entry succeeds on create, checks that each mandatory attribute is present.
+ *
+ * @param[in]     cls    Class row
+ * @param[in]     origin Call origin
+ * @param[in,out] msg    Call message with attr_list and status_list
+ * @param[in]     verb   Verb being checked
+ * @return V_STATUS_SUCCESS, the first per-attribute failure, or
+ *         V_STATUS_MANDATORY_ATTR_MISSING.
+ */
+v_status_t vii_attr_check(const struct vii_class *cls, v_origin_t origin, vi_msg_t *msg,
+                          v_verb_t verb);
+
+/**
+ * @brief Run one verb of @p cls: origin gate, collapse, checks, then the library body.
+ *
+ * The caller already holds the locks for this call.
+ *
+ * @param[in]     cls  Class row
+ * @param[in,out] call Internal call
+ * @return The library status, or the first contract failure.
+ */
+v_status_t vii_verb(const struct vii_class *cls, vii_msg_t *call);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* VII_META_H */

@@ -1,53 +1,61 @@
 {{ generated_proto }}
 syntax = "proto3";
 
-package vedam;
+package {{ pkg.name }};
 
 option java_multiple_files = true;
-option java_package = "org.ltbh.vedam";
-option go_package = "github.com/ltbhappyness/vedam-interface/vedam";
+option java_package = "org.ltbh.{{ pkg.name }}";
+option go_package = "github.com/ltbhappyness/vedam-interface/{{ package }}/{{ cls.name }}/v{{ pkg.major }};{{ cls.name }}v{{ pkg.major }}";
 
-import "vedam/types.proto";
+import "{{ package }}/v1/types.proto";
 
-{% if proto_enums %}
-// Enums below belong to this vertical. Shared call types stay in types.proto.
-{% endif %}
-{% for line in proto_notes %}
+{% for line in cls.proto_notes %}
 {% if line %}
 // {{ line }}
 {% else %}
 //
 {% endif %}
 {% endfor %}
-{% for e in proto_enums %}
+{% for e in cls.enums %}
 
-enum {{ e.name }} {
+enum {{ e.proto_name }} {
 {% for v in e["values"] %}
-  {{ v.name }} = {{ v.value }};{% if v.comment %}  // {{ v.comment }}{% endif %}
+  {{ v.proto_name }} = {{ v.value }};  // {{ v.comment }}
+{% endfor %}
+}
+{% endfor %}
+{% for s in cls.structs %}
 
+message {{ s.proto_name }} {
+{% for f in s.wire_fields %}
+  {{ f.proto_decl }}  // {{ f.comment }}
 {% endfor %}
 }
 {% endfor %}
 
-enum {{ proto_attr_enum.name }} {
-{% for v in proto_attr_enum["values"] %}
-{% for c in v.comments %}
-  // {{ c }}
+enum {{ cls.title }}Attr {
+  // No attribute is selected.
+  {{ cls.ident }}_ATTR_UNSPECIFIED = 0;
+{% for a in cls.public_attrs %}
+{% for line in wrap(a.docs("proto")) %}
+  // {{ line }}
 {% endfor %}
-  {{ v.name }} = {{ v.value }};
+  {{ cls.ident }}_ATTR_{{ a.name }} = {{ a.id }} [({{ package }}.v1.attr) = {
+{% for key, value in a.rules %}
+    {{ key }}: {{ value }}
+{% endfor %}
+  }];
 {% endfor %}
 }
 
-service {{ proto_name }} {
-  option (vertical_uuid) = "{{ uuid_proto_esc }}";
+service {{ pkg.service }} {
+  option ({{ package }}.v1.vertical_uuid) = "{{ pkg.uuid.proto_esc }}";
+  option ({{ package }}.v1.vertical_minor) = {{ pkg.minor }};
+{% for v in cls.rpc_verbs %}
 
-  // Get fills Attr.value for each Attr.id in the request.
-  rpc Get(Message) returns (Message);
-  // Subscribe registers a watch for the ids in the request and returns one Message.
-  rpc Subscribe(Message) returns (Message);
-  // Notify is the stream of later changes for a watch registered by Subscribe.
-  rpc Notify(Message) returns (stream Message);
-  // Unsubscribe stops watches for the ids in the request. An empty attrs list
-  // stops every watch for this caller.
-  rpc Unsubscribe(Message) returns (Message);
+{% for line in wrap(v.comment) %}
+  // {{ line }}
+{% endfor %}
+  rpc {{ v.verb.method }}({{ package }}.v1.Message) returns ({{ "stream " if v.stream }}{{ package }}.v1.Message);
+{% endfor %}
 }

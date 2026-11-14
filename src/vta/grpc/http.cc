@@ -7,8 +7,10 @@
  */
 /*
  * Speaks gRPC unary framing on HTTP/1.1: a 5-byte length prefix and protobuf bytes.
- * The gRPC C++ library is not linked. The class codec is generated.
- * One listen socket serves every class. The path is /vedam.<Class>/<Verb>.
+ * The gRPC C++ library is not linked.
+ * One listen socket serves every class. The path is /<package>.<Service>/<Method>,
+ * for example /vedam.system.v1.SystemService/Get, the path a stock gRPC or Connect
+ * client generated from the proto uses.
  * A worker keeps the accepted socket open and reads the next request.
  */
 #include "vti/codec.h"
@@ -82,7 +84,8 @@ static int find_content_length(const uint8_t *hdr, size_t hdr_len)
     return -1;
 }
 
-namespace {
+namespace
+{
 
 /**
  * @brief Read one HTTP/1.1 request into @p buf and split method, path, and body.
@@ -179,7 +182,7 @@ int read_http(int fd, char *buf, size_t cap, char **method, char **path, uint8_t
 
         line = p;
         nl = nullptr;
-        for (char *q = p; q + 1 < buf + hdr_end; q++) {
+        for (char *q = p; q <= buf + hdr_end; q++) {
             if (q[0] == '\r' && q[1] == '\n') {
                 nl = q;
                 break;
@@ -191,8 +194,7 @@ int read_http(int fd, char *buf, size_t cap, char **method, char **path, uint8_t
         *nl = '\0';
         if (hdr_match(line, "content-length:")) {
             content_len = static_cast<int>(std::strtoul(line + 15, &end, 10));
-            if (end == line + 15 || content_len < 0 ||
-                static_cast<size_t>(content_len) > cap) {
+            if (end == line + 15 || content_len < 0 || static_cast<size_t>(content_len) > cap) {
                 return -1;
             }
         }
@@ -279,7 +281,7 @@ bool strip_grpc_prefix(const uint8_t **body, size_t *body_len)
  *
  * @param[in,out] slot Worker slot that owns the connection buffers
  */
-void handle_client(struct vta_http_slot *slot)
+void handle_client(struct vti_http_slot *slot)
 {
     const char *grpc_status;
     char *method;
@@ -288,13 +290,11 @@ void handle_client(struct vta_http_slot *slot)
     const uint8_t *body;
     size_t body_len;
     size_t out_len;
-    size_t slash;
-    size_t prefix_len;
+    char *slash;
     int fd;
     int rc;
 
     fd = slot->fd;
-    prefix_len = std::strlen("/vedam.");
 
     for (;;) {
         method = nullptr;
@@ -313,24 +313,18 @@ void handle_client(struct vta_http_slot *slot)
 
         body = body_raw;
         strip_grpc_prefix(&body, &body_len);
-        if (std::strcmp(method, "POST") != 0 || std::strncmp(path, "/vedam.", prefix_len) != 0) {
+        if (std::strcmp(method, "POST") != 0 || path[0] != '/') {
             write_http(fd, 200, "12", nullptr, 0);
             continue;
         }
 
-        slash = (size_t)-1;
-        for (size_t i = prefix_len; path[i] != '\0'; i++) {
-            if (path[i] == '/') {
-                slash = i;
-                break;
-            }
-        }
-        if (slash == (size_t)-1 || path[slash + 1] == '\0') {
+        slash = std::strrchr(path, '/');
+        if (slash == path || slash[1] == '\0') {
             write_http(fd, 200, "12", nullptr, 0);
             continue;
         }
-        path[slash] = '\0';
-        rc = vta_codec_http(path + prefix_len, path + slash + 1, body, body_len, slot->out_buf,
+        *slash = '\0';
+        rc = vti_codec_http(path + 1, slash + 1, body, body_len, slot->out_buf,
                             sizeof(slot->out_buf), &out_len, &grpc_status, &slot->codec);
         if (rc != 0) {
             write_http(fd, 200, "12", nullptr, 0);
@@ -349,11 +343,11 @@ void handle_client(struct vta_http_slot *slot)
  * @param[in,out] pool HTTP worker pool
  * @return Slot index, or -1 when none are free.
  */
-int claim_slot(struct vta_http_pool *pool)
+int claim_slot(struct vti_http_pool *pool)
 {
     int i;
 
-    for (i = 0; i < VTA_HTTP_WORKERS; i++) {
+    for (i = 0; i < VTI_HTTP_WORKERS; i++) {
         int zero = 0;
 
         if (__atomic_compare_exchange_n(&pool->slot[i].busy, &zero, 1, 0, __ATOMIC_ACQ_REL,
@@ -370,11 +364,11 @@ int claim_slot(struct vta_http_pool *pool)
  * @param[in] pool HTTP worker pool
  * @return Non-zero when a slot is free.
  */
-int any_free(struct vta_http_pool *pool)
+int any_free(struct vti_http_pool *pool)
 {
     int i;
 
-    for (i = 0; i < VTA_HTTP_WORKERS; i++) {
+    for (i = 0; i < VTI_HTTP_WORKERS; i++) {
         if (__atomic_load_n(&pool->slot[i].busy, __ATOMIC_ACQUIRE) == 0) {
             return 1;
         }
@@ -389,8 +383,8 @@ int any_free(struct vta_http_pool *pool)
  */
 void *http_worker(void *raw)
 {
-    struct vta_http_slot *slot = static_cast<struct vta_http_slot *>(raw);
-    struct vta_http_pool *pool = slot->pool;
+    struct vti_http_slot *slot = static_cast<struct vti_http_slot *>(raw);
+    struct vti_http_pool *pool = slot->pool;
 
     for (;;) {
         struct pollfd pfd;
@@ -436,7 +430,7 @@ void *http_worker(void *raw)
  */
 void *http_listen(void *raw)
 {
-    struct vta_http_pool *pool = static_cast<struct vta_http_pool *>(raw);
+    struct vti_http_pool *pool = static_cast<struct vti_http_pool *>(raw);
 
     for (;;) {
         struct pollfd pfd[2];
@@ -512,7 +506,7 @@ void *http_listen(void *raw)
  * @param[in] bound_cap Capacity of @p bound
  * @return 0 on success, -1 on failure.
  */
-extern "C" int vta_grpc_bind_tcp(const char *bind_spec, char *bound, size_t bound_cap)
+extern "C" int vti_grpc_bind_tcp(const char *bind_spec, char *bound, size_t bound_cap)
 {
     int fd;
     int one;
@@ -598,7 +592,7 @@ out_close:
  * @param[in] listen_fd Listening socket
  * @return 0 on success, -1 on failure.
  */
-extern "C" int vta_http_pool_start(struct vta_http_pool *pool, int listen_fd)
+extern "C" int vti_http_pool_start(struct vti_http_pool *pool, int listen_fd)
 {
     int i;
     int rc;
@@ -611,7 +605,7 @@ extern "C" int vta_http_pool_start(struct vta_http_pool *pool, int listen_fd)
     pool->listen_fd = listen_fd;
     pool->poke_r = -1;
     pool->poke_w = -1;
-    for (i = 0; i < VTA_HTTP_WORKERS; i++) {
+    for (i = 0; i < VTI_HTTP_WORKERS; i++) {
         pool->slot[i].pool = pool;
         pool->slot[i].index = i;
         pool->slot[i].fd = -1;
@@ -632,7 +626,7 @@ extern "C" int vta_http_pool_start(struct vta_http_pool *pool, int listen_fd)
     pool->poke_r = pipes[0];
     pool->poke_w = pipes[1];
 
-    for (i = 0; i < VTA_HTTP_WORKERS; i++) {
+    for (i = 0; i < VTI_HTTP_WORKERS; i++) {
         rc = pipe(pipes);
         if (rc != 0) {
             goto out_stop;
@@ -660,7 +654,7 @@ extern "C" int vta_http_pool_start(struct vta_http_pool *pool, int listen_fd)
     return 0;
 
 out_stop:
-    vta_http_pool_stop(pool);
+    vti_http_pool_stop(pool);
     return -1;
 }
 
@@ -669,7 +663,7 @@ out_stop:
  *
  * @param[in,out] pool HTTP worker pool
  */
-extern "C" void vta_http_pool_stop(struct vta_http_pool *pool)
+extern "C" void vti_http_pool_stop(struct vti_http_pool *pool)
 {
     int i;
     char bit;
@@ -689,7 +683,7 @@ extern "C" void vta_http_pool_stop(struct vta_http_pool *pool)
         (void)vplatform_thread_join(&pool->listen_thread);
         pool->listen_started = 0;
     }
-    for (i = 0; i < VTA_HTTP_WORKERS; i++) {
+    for (i = 0; i < VTI_HTTP_WORKERS; i++) {
         if (pool->slot[i].fd >= 0) {
             shutdown(pool->slot[i].fd, SHUT_RDWR);
         }
@@ -725,7 +719,7 @@ extern "C" void vta_http_pool_stop(struct vta_http_pool *pool)
  * @param[in] fd Listen socket
  * @param[in] uds_path Unix path to unlink, or NULL
  */
-extern "C" void vta_grpc_unbind(int fd, const char *uds_path)
+extern "C" void vti_grpc_unbind(int fd, const char *uds_path)
 {
     if (fd >= 0) {
         close(fd);
@@ -738,14 +732,15 @@ extern "C" void vta_grpc_unbind(int fd, const char *uds_path)
 /**
  * @brief Send one framed protobuf Message and read the framed reply.
  *
- * @p req already carries the five-byte grpc-web header. The reply body is
- * unframed in place inside @p io_buf; *@p resp points at those bytes.
+ * The path is /<package>.<Service>/<Method>. @p req already carries the
+ * five-byte grpc-web header. The reply body is unframed in place inside
+ * @p io_buf; *@p resp points at those bytes.
  *
  * Uses Content-Length and leaves the socket open for another call.
  *
  * @param[in]     fd         Connected TCP socket
- * @param[in]     uuid_str   Hyphenated vertical UUID for the path
- * @param[in]     verb_name  Verb path segment
+ * @param[in]     service    Service name, such as vedam.system.v1.SystemService
+ * @param[in]     verb_name  Method name
  * @param[in]     req        Framed request bytes (header plus Message)
  * @param[in]     req_len    Length of @p req
  * @param[out]    resp       Points at unframed Message bytes inside @p io_buf
@@ -754,10 +749,10 @@ extern "C" void vta_grpc_unbind(int fd, const char *uds_path)
  * @param[in]     io_cap     Capacity of @p io_buf
  * @return V_STATUS_SUCCESS, or a failure code.
  */
-extern "C" v_status_t vta_grpc_http_exchange(int fd, const char *uuid_str, const char *verb_name,
+extern "C" v_status_t vti_grpc_http_exchange(int fd, const char *service, const char *verb_name,
                                              const uint8_t *req, size_t req_len,
-                                             const uint8_t **resp, size_t *resp_len, uint8_t *io_buf,
-                                             size_t io_cap)
+                                             const uint8_t **resp, size_t *resp_len,
+                                             uint8_t *io_buf, size_t io_cap)
 {
     size_t used;
     size_t hdr_end;
@@ -772,7 +767,7 @@ extern "C" v_status_t vta_grpc_http_exchange(int fd, const char *uuid_str, const
     ssize_t n;
     ssize_t w;
 
-    if (fd < 0 || uuid_str == NULL || verb_name == NULL || resp == NULL || resp_len == NULL ||
+    if (fd < 0 || service == NULL || verb_name == NULL || resp == NULL || resp_len == NULL ||
         io_buf == NULL) {
         return V_STATUS_INVALID_PARAMETER;
     }
@@ -781,12 +776,12 @@ extern "C" v_status_t vta_grpc_http_exchange(int fd, const char *uuid_str, const
     }
 
     hn = std::snprintf(hdr, sizeof(hdr),
-                       "POST /vedam.%s/%s HTTP/1.1\r\n"
+                       "POST /%s/%s HTTP/1.1\r\n"
                        "Content-Type: application/grpc+proto\r\n"
                        "Content-Length: %zu\r\n"
                        "Connection: keep-alive\r\n"
                        "\r\n",
-                       uuid_str, verb_name, req_len);
+                       service, verb_name, req_len);
     if (hn < 0 || (size_t)hn >= sizeof(hdr)) {
         return V_STATUS_FAILURE;
     }
@@ -850,7 +845,7 @@ extern "C" v_status_t vta_grpc_http_exchange(int fd, const char *uuid_str, const
 
     body_ptr = io_buf + body_off;
     body_len = static_cast<size_t>(content_len);
-    vta_codec_grpc_unframe(&body_ptr, &body_len);
+    vti_codec_grpc_unframe(&body_ptr, &body_len);
     *resp = body_ptr;
     *resp_len = body_len;
     return V_STATUS_SUCCESS;

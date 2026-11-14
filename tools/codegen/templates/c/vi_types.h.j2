@@ -30,7 +30,12 @@ typedef vuint32_t v_attr_id_t;
  */
 typedef enum _v_status_t {
 {% for item in status_rows %}
+{% if item.split %}
+    {{ item.ident }} =
+        {{ item.value }}, /**< {{ item.comment }} */
+{% else %}
     {{ item.ident }} = {{ item.value }}, /**< {{ item.comment }} */
+{% endif %}
 {% endfor %}
 } v_status_t;
 
@@ -43,36 +48,31 @@ typedef struct _v_version_t {
 } v_version_t;
 
 /**
- * @brief Contiguous byte list.
- */
-typedef struct _v_u8_list_t {
-    vuint32_t count;
-    vuint8_t *list;
-} v_u8_list_t;
-
-/**
- * @brief Contiguous unsigned 32-bit list.
- */
-typedef struct _v_u32_list_t {
-    vuint32_t count;
-    vuint32_t *list;
-} v_u32_list_t;
-
-/**
- * @brief Contiguous signed 32-bit list.
- */
-typedef struct _v_s32_list_t {
-    vuint32_t count;
-    vint32_t *list;
-} v_s32_list_t;
-
-/**
  * @brief UTF-8 text with explicit length.
+ *
+ * On get the caller points @p buf at its buffer and sets @p len to the room in
+ * it. The reply sets @p len to the bytes written. When the text does not fit,
+ * that attribute's status is V_STATUS_BUFFER_OVERFLOW, nothing is copied, and
+ * @p len holds the needed length.
  */
 typedef struct _v_text_t {
     vuint32_t len;
     char *buf;
 } v_text_t;
+
+/**
+ * @brief Items of one type, laid out one after another, with a count.
+ *
+ * The attribute names the item type. On get the caller points @p items at its
+ * array and sets @p count to the room in it. The reply sets @p count to the
+ * items written. When the list does not fit, that attribute's status is
+ * V_STATUS_BUFFER_OVERFLOW, nothing is copied, and @p count holds the needed
+ * number.
+ */
+typedef struct _v_list_t {
+    vuint32_t count;
+    void *items;
+} v_list_t;
 
 /**
  * @brief Attribute value payload. The active member depends on the attribute type.
@@ -89,9 +89,7 @@ typedef union _v_attr_value_t {
     vint64_t s64;
     v_version_t version;
     v_text_t text;
-    v_u8_list_t u8list;
-    v_u32_list_t u32list;
-    v_s32_list_t s32list;
+    v_list_t list;
     void *ptr;
 } v_attr_value_t;
 
@@ -127,7 +125,9 @@ typedef struct _vi_msg_t {
  * version-5 UUID. Another author may use that recipe with their own domain, or
  * may publish sixteen bytes produced another way.
  */
-static const uint8_t vi_namespace_uuid[16] = { {{ vedam_uuid_ns_c_array }} };
+static const uint8_t vi_namespace_uuid[16] = {
+    {{ vedam_uuid_ns_c_array }},
+};
 
 #ifdef __cplusplus
 }

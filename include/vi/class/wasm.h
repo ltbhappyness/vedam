@@ -45,7 +45,9 @@ typedef enum _vi_wasm_attr_t {
  * major.minor line; a later line does not rewrite it. A hyphenated form for logs
  * or HTTP is derived from these bytes when a message leaves this process.
  */
-static const uint8_t vi_wasm_uuid[16] = { 0x05, 0x3e, 0xf9, 0xba, 0x73, 0x54, 0x58, 0x91, 0xad, 0x47, 0x7a, 0x52, 0x9f, 0x4c, 0x1b, 0x64 };
+static const uint8_t vi_wasm_uuid[16] = {
+    0x05, 0x3e, 0xf9, 0xba, 0x73, 0x54, 0x58, 0x91, 0xad, 0x47, 0x7a, 0x52, 0x9f, 0x4c, 0x1b, 0x64,
+};
 
 /**
  * @brief Fill the values for the attribute ids in the message.
@@ -57,7 +59,7 @@ static const uint8_t vi_wasm_uuid[16] = { 0x05, 0x3e, 0xf9, 0xba, 0x73, 0x54, 0x
  * only when every entry is success.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_wasm_get(vi_msg_t *msg);
 
@@ -68,7 +70,7 @@ v_status_t vi_wasm_get(vi_msg_t *msg);
  * than zero, both attr_list and status_list must be set.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_wasm_subscribe(vi_msg_t *msg);
 
@@ -79,7 +81,7 @@ v_status_t vi_wasm_subscribe(vi_msg_t *msg);
  * than zero, both attr_list and status_list must be set.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_wasm_unsubscribe(vi_msg_t *msg);
 

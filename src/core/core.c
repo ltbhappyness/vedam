@@ -5,36 +5,27 @@
  * A changed copy of Vedam is not called Vedam.
  * An application that only calls Vedam keeps its own license. See LICENSE.
  */
-#include "core/core.h"
+#include "core/node.h"
 
 #include "lock/store.h"
 #include "platform/platform.h"
 #include "util/log.h"
 #include "vi/vedam.h"
 #include "vii/class/system.h"
+#include "vii/dispatch.h"
+#include "vii/meta.h"
 #include "vti/class_uuid.h"
 #include "vti/connect.h"
-#include "vti/dispatch.h"
 #include "vti/grpc.h"
 #include "vti/grpc_uds.h"
 #include "vti/inproc.h"
 #include "vti/mq.h"
-#include "vti/vta.h"
+#include "vti/vti.h"
 
 #include <stdio.h>
 #include <string.h>
 
-static vedam_t *g_node;
-
-/**
- * @brief The node allocated by vedam_init, or NULL before init and after deinit.
- *
- * @return Pointer to the process node, or NULL.
- */
-vedam_t *vedam_node(void)
-{
-    return g_node;
-}
+vedam_t *g_vedam_node;
 
 /**
  * @brief Map a transport name to its operations table.
@@ -42,26 +33,26 @@ vedam_t *vedam_node(void)
  * @param[in] name Transport name
  * @return The operations table, or NULL when the name is unknown.
  */
-static const vta_ops_t *ops_by_name(const char *name)
+static const vti_ops_t *ops_by_name(const char *name)
 {
     if (strcmp(name, "inproc") == 0) {
-        return &vta_inproc_ops;
+        return &vti_inproc_ops;
     }
 
     if (strcmp(name, "mq") == 0) {
-        return &vta_mq_ops;
+        return &vti_mq_ops;
     }
 
     if (strcmp(name, "grpc") == 0) {
-        return &vta_grpc_ops;
+        return &vti_grpc_ops;
     }
 
     if (strcmp(name, "grpc_uds") == 0) {
-        return &vta_grpc_uds_ops;
+        return &vti_grpc_uds_ops;
     }
 
     if (strcmp(name, "connect") == 0) {
-        return &vta_connect_ops;
+        return &vti_connect_ops;
     }
 
     return NULL;
@@ -92,20 +83,20 @@ static const char *pick(const char *env_name, const char *fallback)
  * @param[in]  address Listen address, or NULL when the link has none
  * @return V_STATUS_SUCCESS, V_STATUS_NO_MEMORY, or the listen status.
  */
-static v_status_t boot_rx(vta_desc_t **out, int link, const char *address)
+static v_status_t boot_rx(vti_desc_t **out, int link, const char *address)
 {
-    vta_desc_t *desc;
+    vti_desc_t *desc;
     v_status_t st;
 
-    desc = vta_open(link);
+    desc = vti_open(link);
     if (desc == NULL) {
         return V_STATUS_NO_MEMORY;
     }
 
-    st = vta_listen(desc, address);
+    st = vti_listen(desc, address);
     if (st != V_STATUS_SUCCESS) {
         vlog_error("receiver listen failed %d", (int)st);
-        vta_close(desc);
+        vti_close(desc);
         return st;
     }
 
@@ -120,8 +111,8 @@ static v_status_t boot_rx(vta_desc_t **out, int link, const char *address)
  */
 v_status_t vedam_init(void)
 {
-    const char *kind[VTA_LINK_COUNT];
-    const char *addr[VTA_LINK_COUNT];
+    const char *kind[VTI_LINK_COUNT];
+    const char *addr[VTI_LINK_COUNT];
     const char *remote_address;
     const char *ipc_address;
     const char *remote_kind;
@@ -135,7 +126,7 @@ v_status_t vedam_init(void)
     int n;
     int i;
 
-    if (g_node != NULL) {
+    if (g_vedam_node != NULL) {
         return V_STATUS_ITEM_ALREADY_EXISTS;
     }
 
@@ -169,19 +160,20 @@ v_status_t vedam_init(void)
         remote_address = pick("VEDAM_TRANSPORT_REMOTE_ADDR", remote_fallback);
     }
 
-    kind[VTA_LINK_LOCAL] = local_kind;
-    kind[VTA_LINK_IPC] = ipc_kind;
-    kind[VTA_LINK_REMOTE] = remote_kind;
-    addr[VTA_LINK_LOCAL] = NULL;
-    addr[VTA_LINK_IPC] = ipc_address;
-    addr[VTA_LINK_REMOTE] = remote_address;
+    kind[VTI_LINK_LOCAL] = local_kind;
+    kind[VTI_LINK_IPC] = ipc_kind;
+    kind[VTI_LINK_REMOTE] = remote_kind;
+    addr[VTI_LINK_LOCAL] = NULL;
+    addr[VTI_LINK_IPC] = ipc_address;
+    addr[VTI_LINK_REMOTE] = remote_address;
 
     node = vplatform_calloc(1, sizeof(*node));
     if (node == NULL) {
         return V_STATUS_NO_MEMORY;
     }
+    node->classes = vii_classes;
 
-    for (i = 0; i < VTA_LINK_COUNT; i++) {
+    for (i = 0; i < VTI_LINK_COUNT; i++) {
         node->ops[i] = ops_by_name(kind[i]);
         if (node->ops[i] != NULL) {
             continue;
@@ -192,23 +184,18 @@ v_status_t vedam_init(void)
         goto out_free_node;
     }
 
-    g_node = node;
+    g_vedam_node = node;
     rc = vedam_lockdb_open(node);
     if (rc != V_STATUS_SUCCESS) {
         goto out_clear_node;
     }
 
-    rc = vta_class_uuid_map_init();
+    rc = vti_class_uuid_map_init();
     if (rc != V_STATUS_SUCCESS) {
         goto out_close_locks;
     }
 
-    rc = vta_dispatch_table_init(node);
-    if (rc != V_STATUS_SUCCESS) {
-        goto out_uuid_map;
-    }
-
-    for (i = 0; i < VTA_LINK_COUNT; i++) {
+    for (i = 0; i < VTI_LINK_COUNT; i++) {
         rc = boot_rx(&node->rx[i], i, addr[i]);
         if (rc != V_STATUS_SUCCESS) {
             goto out_close_rx;
@@ -218,7 +205,7 @@ v_status_t vedam_init(void)
     vlog_info("local=%s ipc=%s remote=%s", local_kind, ipc_kind, remote_kind);
     {
         vi_msg_t vim;
-        vta_msg_t call;
+        vii_msg_t call;
 
         vplatform_memset(&vim, 0, sizeof(vim));
         vplatform_memset(&call, 0, sizeof(call));
@@ -228,7 +215,7 @@ v_status_t vedam_init(void)
         call.major = VII_SYSTEM_MAJOR;
         call.minor = VII_SYSTEM_MINOR;
         call.msg = &vim;
-        rc = vta_dispatch(&call);
+        rc = vii_dispatch(&call);
     }
     if (rc != V_STATUS_SUCCESS) {
         goto out_close_rx;
@@ -238,15 +225,13 @@ v_status_t vedam_init(void)
 
 out_close_rx:
     while (i-- > 0) {
-        vta_close(node->rx[i]);
+        vti_close(node->rx[i]);
     }
-    vta_dispatch_table_fini(node);
-out_uuid_map:
-    vta_class_uuid_map_fini();
+    vti_class_uuid_map_fini();
 out_close_locks:
     vedam_lockdb_close(node);
 out_clear_node:
-    g_node = NULL;
+    g_vedam_node = NULL;
 out_free_node:
     vplatform_free(node);
     return rc;
@@ -260,13 +245,13 @@ v_status_t vedam_deinit(void)
     vedam_t *node;
     int i;
 
-    if (g_node == NULL) {
+    if (g_vedam_node == NULL) {
         return V_STATUS_UNINITIALIZED;
     }
 
     {
         vi_msg_t vim;
-        vta_msg_t call;
+        vii_msg_t call;
 
         vplatform_memset(&vim, 0, sizeof(vim));
         vplatform_memset(&call, 0, sizeof(call));
@@ -276,16 +261,15 @@ v_status_t vedam_deinit(void)
         call.major = VII_SYSTEM_MAJOR;
         call.minor = VII_SYSTEM_MINOR;
         call.msg = &vim;
-        (void)vta_dispatch(&call);
+        (void)vii_dispatch(&call);
     }
-    node = g_node;
-    for (i = VTA_LINK_COUNT; i-- > 0;) {
-        vta_close(node->rx[i]);
+    node = g_vedam_node;
+    for (i = VTI_LINK_COUNT; i-- > 0;) {
+        vti_close(node->rx[i]);
     }
-    vta_dispatch_table_fini(node);
-    vta_class_uuid_map_fini();
+    vti_class_uuid_map_fini();
     vedam_lockdb_close(node);
-    g_node = NULL;
+    g_vedam_node = NULL;
     vplatform_free(node);
     return V_STATUS_SUCCESS;
 }

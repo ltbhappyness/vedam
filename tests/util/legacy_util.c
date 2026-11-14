@@ -10,6 +10,7 @@
 #include "util/attr.h"
 #include "vi/class/system.h"
 #include "vii/class/system.h"
+#include "vii/meta.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -18,6 +19,28 @@ static int fail(const char *msg)
 {
     fprintf(stderr, "%s\n", msg);
     return 1;
+}
+
+/**
+ * @brief Run @p verb on the System row the way a caller with @p origin would.
+ *
+ * @param[in]     origin Call origin
+ * @param[in]     verb   Verb
+ * @param[in,out] vim    Call message
+ * @return The verb status.
+ */
+static v_status_t system_verb(v_origin_t origin, v_verb_t verb, vi_msg_t *vim)
+{
+    vii_msg_t call;
+
+    memset(&call, 0, sizeof(call));
+    call.class_id = V_CLASS_SYSTEM;
+    call.origin = origin;
+    call.verb = verb;
+    call.major = VII_SYSTEM_MAJOR;
+    call.minor = VII_SYSTEM_MINOR;
+    call.msg = vim;
+    return vii_verb(&vii_classes[V_CLASS_SYSTEM], &call);
 }
 
 static int test_attr_collapse(void)
@@ -54,7 +77,7 @@ static int test_via_before_init(void)
     v_status_t rc;
 
     memset(&vim, 0, sizeof(vim));
-    rc = vii_system_create(V_ORIGIN_INTERNAL, VII_SYSTEM_MAJOR, VII_SYSTEM_MINOR, &vim);
+    rc = system_verb(V_ORIGIN_INTERNAL, V_VERB_CREATE, &vim);
     if (rc != V_STATUS_SUCCESS) {
         fprintf(stderr, "via create stub %d\n", (int)rc);
         return 1;

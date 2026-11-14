@@ -25,6 +25,9 @@ add_subdirectory(src/platform)
 add_subdirectory(src/ds)
 add_subdirectory(src/util)
 add_subdirectory(src/lock)
+add_subdirectory(src/lib)
+add_subdirectory(src/via)
+add_subdirectory(src/va)
 add_subdirectory(src/vta)
 add_subdirectory(src/core)
 
@@ -34,16 +37,16 @@ target_link_libraries(vedam PUBLIC
     vedam_ds
     vedam_util
     vedam_lock
+    vedam_lib
+    vedam_via
+    vedam_va
     vedam_vta
-    vedam_node
-    protobuf::libprotobuf
-    Threads::Threads
-    rt
+    vedam_core
 )
 add_dependencies(vedam vedam_codegen)
 
-add_executable(vedamd src/vedamd/main.c)
-target_link_libraries(vedamd PRIVATE vedam)
+add_subdirectory(src/vedamd)
+add_subdirectory(examples)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/vi DESTINATION include)
 install(TARGETS vedam vedamd
@@ -54,6 +57,3 @@ install(TARGETS vedam vedamd
 
 enable_testing()
 add_subdirectory(tests)
-
-add_executable(example_read_system examples/read_system.c)
-target_link_libraries(example_read_system PRIVATE vedam)

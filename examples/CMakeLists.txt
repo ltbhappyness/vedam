@@ -1,0 +1,2 @@
+add_executable(example_read_system read_system.c)
+target_link_libraries(example_read_system PRIVATE vedam)

@@ -1,0 +1,84 @@
+{{ generated_c }}
+{% for cls in classes %}
+#include "lib/{{ cls.name }}.h"
+{% endfor %}
+{% for cls in classes %}
+#include "vii/class/{{ cls.name }}.h"
+{% endfor %}
+#include "vii/meta.h"
+
+const struct vii_verb_rule vii_verb_rules[V_VERB_COUNT] = {
+{% for v in verbs %}
+    [{{ v.c_ident }}] = {.collapse = {{ 1 if v.collapse else 0 }}, .checks_list = {{ 1 if v.checks_list else 0 }}, .writes_values = {{ 1 if v.writes_values else 0 }}},
+{% endfor %}
+};
+{% for cls in classes %}
+{% for e in cls.attr_enums %}
+
+static const vint32_t {{ e.name }}_values[] = {{ "{" }}{{ e["values"] | map(attribute="value") | join(", ") }}};
+{% endfor %}
+
+static const struct vii_attr_meta {{ cls.name }}_attrs[] = {
+{% for a in cls.attrs %}
+    {
+        .id = {{ a.id }},
+        .flags = {{ a.flags_c }},
+        .kind = {{ a.kind.c_ident }},
+        .is_public = {{ 1 if a.is_public else 0 }},
+{% if a.range %}
+        .has_range = 1,
+{% endif %}
+{% if a.typedef.form == "struct" %}
+        .struct_index = {{ a.struct_index }},
+{% endif %}
+{% if a.is_list %}
+        .elem_kind = {{ a.elem_kind.c_ident }},
+{% endif %}
+{% if a.typedef.form == "struct" %}
+        .size = {{ a.size_expr }},
+{% endif %}
+{% if a.is_list %}
+        .elem_size = {{ a.elem_size_expr }},
+{% endif %}
+{% if a.max_len %}
+        .max_len = {{ a.max_len }},
+{% endif %}
+{% if a.is_list %}
+        .max_count = {{ a.max_count }},
+{% endif %}
+{% if a.enum_type %}
+        .value_count = {{ a.enum_type["values"] | length }},
+{% endif %}
+{% if a.range %}
+        .min = {{ a.range[0] }},
+        .max = {{ a.range[1] }},
+{% endif %}
+{% if a.enum_type %}
+        .values = {{ a.enum_type.name }}_values,
+{% endif %}
+    },
+{% endfor %}
+};
+
+static const vuint8_t {{ cls.name }}_attr_by_id[] = {{ "{" }}{{ cls.attr_by_id | join(", ") }}};
+{% endfor %}
+
+const struct vii_class vii_classes[V_CLASS_ID_MAX + 1] = {
+{% for cls in classes %}
+    [V_CLASS_{{ cls.ident }}] =
+        {
+            .attr_by_id = {{ cls.name }}_attr_by_id,
+            .attrs = {{ cls.name }}_attrs,
+            .attr_id_max = {{ cls.attr_id_max }},
+            .external_verbs = {{ cls.external_verbs_c }},
+            .body =
+                {
+{% for v in cls.verbs %}
+                    [{{ v.verb.c_ident }}] = vlib_{{ cls.name }}_{{ v.verb.name }},
+{% endfor %}
+                },
+            .attr_count = {{ cls.attrs | length }},
+            .singleton = {{ 1 if cls.singleton else 0 }},
+        },
+{% endfor %}
+};

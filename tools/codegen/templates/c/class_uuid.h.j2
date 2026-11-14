@@ -4,33 +4,47 @@
 
 #include "vii/types.h"
 
-#include <stddef.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum { VTA_CLASS_UUID_LEN = 16 };
+enum { VTI_CLASS_UUID_LEN = 16 };
 
 /**
- * @brief Build the UUID hash from every supported vii table line.
+ * @brief Build the UUID hash and the service hash from every supported line.
  *
- * Call once from vedam_init. Local vi_* never uses this map.
+ * Call once from vedam_init. Local vi_* never uses these maps.
  *
- * @return V_STATUS_SUCCESS or V_STATUS_NO_MEMORY.
+ * @return V_STATUS_SUCCESS, V_STATUS_UNINITIALIZED, or V_STATUS_NO_MEMORY.
  */
-v_status_t vta_class_uuid_map_init(void);
+v_status_t vti_class_uuid_map_init(void);
 
 /**
- * @brief Free the UUID hash and hit records built by vta_class_uuid_map_init.
+ * @brief Free the maps and hit records built by vti_class_uuid_map_init.
  */
-void vta_class_uuid_map_fini(void);
+void vti_class_uuid_map_fini(void);
+
+/**
+ * @brief Build the service hash that maps a gRPC service name to class, major, and minor.
+ *
+ * vti_class_uuid_map_init calls this.
+ *
+ * @return V_STATUS_SUCCESS, V_STATUS_UNINITIALIZED, or V_STATUS_NO_MEMORY.
+ */
+v_status_t vti_service_map_init(void);
+
+/**
+ * @brief Free the service hash and its hit records.
+ *
+ * vti_class_uuid_map_fini calls this.
+ */
+void vti_service_map_fini(void);
 
 /**
  * @brief Map a 16-byte vertical UUID to class index, major, and minor.
  *
- * Used only when a message enters on IPC or the remote door. Looks up the
- * hash filled at init. A local call never enters this path.
+ * Used only when a message enters on IPC. Looks up the hash filled at init.
+ * A local call never enters this path.
  *
  * @param[in]  uuid      Sixteen UUID bytes
  * @param[out] out_class Class index on success
@@ -39,8 +53,33 @@ void vta_class_uuid_map_fini(void);
  * @return V_STATUS_SUCCESS, V_STATUS_INVALID_PARAMETER, V_STATUS_UNINITIALIZED,
  *         or V_STATUS_NOT_IMPLEMENTED.
  */
-v_status_t vta_class_from_uuid(const uint8_t *uuid, v_class_id_t *out_class, vuint32_t *out_major,
+v_status_t vti_class_from_uuid(const uint8_t *uuid, v_class_id_t *out_class, vuint32_t *out_major,
                                vuint32_t *out_minor);
+
+/**
+ * @brief Map a gRPC service name to class index, major, and the latest minor of that major.
+ *
+ * The name is the package and the service, for example vedam.system.v1.SystemService.
+ * Looks up the hash filled at init.
+ *
+ * @param[in]  service   NUL-terminated service name
+ * @param[out] out_class Class index on success
+ * @param[out] out_major Vertical major on success
+ * @param[out] out_minor Vertical minor on success
+ * @return V_STATUS_SUCCESS, V_STATUS_INVALID_PARAMETER, V_STATUS_UNINITIALIZED,
+ *         or V_STATUS_NOT_IMPLEMENTED.
+ */
+v_status_t vti_service_lookup(const char *service, v_class_id_t *out_class, vuint32_t *out_major,
+                              vuint32_t *out_minor);
+
+/**
+ * @brief Return the gRPC service name for @p class_id at @p major, or NULL when unknown.
+ *
+ * @param[in] class_id Local class index
+ * @param[in] major    Vertical major
+ * @return Static NUL-terminated service name, or NULL.
+ */
+const char *vti_service_name(v_class_id_t class_id, vuint32_t major);
 
 /**
  * @brief Return the latest 16-byte UUID for @p class_id, or NULL when unknown.
@@ -48,34 +87,7 @@ v_status_t vta_class_from_uuid(const uint8_t *uuid, v_class_id_t *out_class, vui
  * @param[in] class_id Local class index
  * @return Pointer to sixteen bytes, or NULL.
  */
-const uint8_t *vta_class_uuid_bytes(v_class_id_t class_id);
-
-/**
- * @brief Format the latest UUID string for @p class_id into @p out.
- *
- * @param[in]  class_id Local class index
- * @param[out] out      Buffer for the 36-character UUID string plus NUL
- * @param[in]  out_len  Capacity of @p out
- * @return V_STATUS_SUCCESS, V_STATUS_INVALID_PARAMETER, or V_STATUS_NOT_IMPLEMENTED.
- */
-v_status_t vta_class_uuid_string(v_class_id_t class_id, char *out, size_t out_len);
-
-/**
- * @brief Parse a hyphenated UUID string into sixteen bytes.
- *
- * @param[in]  str Hyphenated UUID text
- * @param[out] out Sixteen-byte buffer
- * @return V_STATUS_SUCCESS or V_STATUS_INVALID_PARAMETER.
- */
-v_status_t vta_class_uuid_parse(const char *str, uint8_t *out);
-
-/**
- * @brief Non-zero when @p class_id is a singleton vertical.
- *
- * @param[in] class_id Local class index
- * @return 1 for singleton, 0 for keyed, -1 when the class is unknown.
- */
-int vedam_lock_class_singleton(v_class_id_t class_id);
+const uint8_t *vti_class_uuid_bytes(v_class_id_t class_id);
 
 #ifdef __cplusplus
 }

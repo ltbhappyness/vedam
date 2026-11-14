@@ -45,7 +45,9 @@ typedef enum _vi_security_attr_t {
  * major.minor line; a later line does not rewrite it. A hyphenated form for logs
  * or HTTP is derived from these bytes when a message leaves this process.
  */
-static const uint8_t vi_security_uuid[16] = { 0x3d, 0x8d, 0x56, 0x23, 0x8c, 0xa8, 0x58, 0x5f, 0xa4, 0x34, 0x66, 0x4c, 0x1d, 0xf3, 0x8f, 0xfa };
+static const uint8_t vi_security_uuid[16] = {
+    0x3d, 0x8d, 0x56, 0x23, 0x8c, 0xa8, 0x58, 0x5f, 0xa4, 0x34, 0x66, 0x4c, 0x1d, 0xf3, 0x8f, 0xfa,
+};
 
 /**
  * @brief Fill the values for the attribute ids in the message.
@@ -57,7 +59,7 @@ static const uint8_t vi_security_uuid[16] = { 0x3d, 0x8d, 0x56, 0x23, 0x8c, 0xa8
  * only when every entry is success.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_security_get(vi_msg_t *msg);
 
@@ -68,7 +70,7 @@ v_status_t vi_security_get(vi_msg_t *msg);
  * than zero, both attr_list and status_list must be set.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_security_subscribe(vi_msg_t *msg);
 
@@ -79,7 +81,7 @@ v_status_t vi_security_subscribe(vi_msg_t *msg);
  * than zero, both attr_list and status_list must be set.
  *
  * @param[in,out] msg Call message
- * @return The local-transport status.
+ * @return The call status.
  */
 v_status_t vi_security_unsubscribe(vi_msg_t *msg);
 

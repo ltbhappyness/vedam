@@ -5,7 +5,7 @@
  * A changed copy of Vedam is not called Vedam.
  * An application that only calls Vedam keeps its own license. See LICENSE.
  */
-#include "vedam/types.pb.h"
+#include "vedam/v1/types.pb.h"
 
 #include <gtest/gtest.h>
 
@@ -13,8 +13,8 @@
 
 TEST(ProtoMessage, EmptyRoundTrip)
 {
-    vedam::Message in;
-    vedam::Message out;
+    vedam::v1::Message in;
+    vedam::v1::Message out;
     std::string bytes;
 
     ASSERT_TRUE(in.SerializeToString(&bytes));
@@ -24,15 +24,15 @@ TEST(ProtoMessage, EmptyRoundTrip)
 
 TEST(ProtoMessage, RejectsGarbage)
 {
-    vedam::Message out;
+    vedam::v1::Message out;
 
     EXPECT_FALSE(out.ParseFromString(std::string("\xff\xff", 2)));
 }
 
 TEST(ProtoMessage, ManyAttributes)
 {
-    vedam::Message in;
-    vedam::Message out;
+    vedam::v1::Message in;
+    vedam::v1::Message out;
     std::string bytes;
     int i;
 

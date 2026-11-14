@@ -18,6 +18,45 @@ extern "C" {
 #endif
 
 /**
+ * @brief Every system attribute identifier, public and internal.
+ *
+ * A public id has the same number as in vi/class/system.h.
+ */
+typedef enum _vii_system_attr_t {
+    VII_SYSTEM_ATTR_UNSPECIFIED = 0,
+    /**
+     * @brief Role of this process. A is archive, B is full validator, C is a light operator, D is a small gateway, E is a thin web client.
+     * @type vi_system_node_class_t
+     * @kind S32
+     * @values vi_system_node_class_t
+     * @flags READ_ONLY
+     */
+    VII_SYSTEM_ATTR_NODE_CLASS = 1,
+    /**
+     * @brief Agreed message version for this node. This era always reports major 0 and minor 1.
+     * @type v_version_t
+     * @kind VERSION
+     * @flags READ_ONLY | SUBSCRIBABLE
+     */
+    VII_SYSTEM_ATTR_PROTOCOL_VERSION = 2,
+    /**
+     * @brief Whether the process is starting, ready, degraded, draining, or dead. Pass value.ptr to a caller-owned vi_system_state_t.
+     * @type vi_system_state_t
+     * @kind STRUCT
+     * @flags READ_ONLY | SUBSCRIBABLE
+     */
+    VII_SYSTEM_ATTR_SYSTEM_STATE = 3,
+    /**
+     * @brief Commit of the running build, for a person to read. Not an input to the vertical UUID.
+     * @type v_text_t
+     * @kind TEXT
+     * @get Set len to the room in buf. On overflow len holds the needed length.
+     * @flags READ_ONLY
+     */
+    VII_SYSTEM_ATTR_RELEASE_COMMIT = 4,
+} vii_system_attr_t;
+
+/**
  * @brief Highest major index for a supported system UUID line.
  */
 enum { VII_SYSTEM_UUID_MAJOR_MAX = 1 };
@@ -43,104 +82,31 @@ enum { VII_SYSTEM_MINOR = 0 };
  * A slot with no YAML line is left zero. The public header keeps only the latest
  * line; this table is for the library and the edge map.
  */
-static const uint8_t vii_system_uuid[VII_SYSTEM_UUID_MAJOR_MAX + 1]
-                                            [VII_SYSTEM_UUID_MINOR_MAX + 1]
-                                            [16] = {
+static const uint8_t vii_system_uuid[][VII_SYSTEM_UUID_MINOR_MAX + 1][16] = {
     {
-        { 0 },
+        {0},
     },
     {
-        { 0xc2, 0xb9, 0x15, 0x80, 0x60, 0x92, 0x5c, 0x64, 0xbd, 0x0c, 0xea, 0x7f, 0x37, 0x7b, 0x56, 0xc1 },
+        {
+            0xc2,
+            0xb9,
+            0x15,
+            0x80,
+            0x60,
+            0x92,
+            0x5c,
+            0x64,
+            0xbd,
+            0x0c,
+            0xea,
+            0x7f,
+            0x37,
+            0x7b,
+            0x56,
+            0xc1,
+        },
     },
 };
-
-/**
- * @brief Internal verbs for system. Attribute ids live in vi/class/system.h.
- */
-
-/**
- * @brief Create the system object. Origin must be internal.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message (key and attributes)
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_system_create(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                       vi_msg_t *msg);
-
-/**
- * @brief Fill attribute values after contract checks.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status after the contract checks.
- */
-v_status_t vii_system_get(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                    vi_msg_t *msg);
-
-/**
- * @brief Change attributes that allow set. Origin must be internal.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_system_set(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                    vi_msg_t *msg);
-
-/**
- * @brief Tear down the system object. Origin must be internal.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message (key only)
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_system_delete(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                       vi_msg_t *msg);
-
-/**
- * @brief Watch SUBSCRIBABLE attributes.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status after the contract checks.
- */
-v_status_t vii_system_subscribe(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                          vi_msg_t *msg);
-
-/**
- * @brief Stop watches for the same attribute id list.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status.
- */
-v_status_t vii_system_unsubscribe(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                            vi_msg_t *msg);
-
-/**
- * @brief Push changed attributes to current subscribers.
- *
- * @param[in]     origin Call origin
- * @param[in]     major  Vertical major from the UUID line
- * @param[in]     minor  Vertical minor from the UUID line
- * @param[in,out] msg    Call message
- * @return The library status, or V_STATUS_NOT_IMPLEMENTED for an external origin.
- */
-v_status_t vii_system_notify(v_origin_t origin, vuint32_t major, vuint32_t minor,
-                                       vi_msg_t *msg);
 
 #ifdef __cplusplus
 }

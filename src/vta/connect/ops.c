@@ -18,7 +18,7 @@
  * @param[in] desc Argument desc
  * @return Result of conn_close.
  */
-static v_status_t conn_close(vta_desc_t *desc)
+static v_status_t conn_close(vti_desc_t *desc)
 {
     (void)desc;
     return V_STATUS_SUCCESS;
@@ -30,7 +30,7 @@ static v_status_t conn_close(vta_desc_t *desc)
  * @param[in] address Argument address
  * @return Result of conn_listen.
  */
-static v_status_t conn_listen(vta_desc_t *desc, const char *address)
+static v_status_t conn_listen(vti_desc_t *desc, const char *address)
 {
     (void)desc;
     (void)address;
@@ -46,7 +46,7 @@ static v_status_t conn_listen(vta_desc_t *desc, const char *address)
  * @param[in] client Argument client
  * @return Result of conn_accept.
  */
-static v_status_t conn_accept(vta_desc_t *desc, vta_desc_t **client)
+static v_status_t conn_accept(vti_desc_t *desc, vti_desc_t **client)
 {
     (void)desc;
     (void)client;
@@ -59,7 +59,7 @@ static v_status_t conn_accept(vta_desc_t *desc, vta_desc_t **client)
  * @param[in] address Argument address
  * @return Result of conn_connect.
  */
-static v_status_t conn_connect(vta_desc_t *desc, const char *address)
+static v_status_t conn_connect(vti_desc_t *desc, const char *address)
 {
     (void)desc;
     (void)address;
@@ -73,14 +73,14 @@ static v_status_t conn_connect(vta_desc_t *desc, const char *address)
  * @param[in,out] msg  Call message
  * @return V_STATUS_NOT_IMPLEMENTED.
  */
-static v_status_t conn_call(vta_desc_t *desc, vta_msg_t *msg)
+static v_status_t conn_call(vti_desc_t *desc, vii_msg_t *msg)
 {
     (void)desc;
     (void)msg;
     return V_STATUS_NOT_IMPLEMENTED;
 }
 
-const vta_ops_t vta_connect_ops = {
+const vti_ops_t vti_connect_ops = {
     .close = conn_close,
     .listen = conn_listen,
     .accept = conn_accept,

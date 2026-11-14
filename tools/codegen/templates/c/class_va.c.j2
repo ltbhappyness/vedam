@@ -1,89 +1,32 @@
 {{ generated_c }}
-#include "vi/class/{{ class_name }}.h"
-#include "vii/class/{{ class_name }}.h"
-
-#include "vti/dispatch.h"
-{% for name in public_verbs %}
-{% if name == "get" %}
+#include "vi/class/{{ cls.name }}.h"
+#include "vii/class/{{ cls.name }}.h"
+#include "vii/dispatch.h"
+{% for v in cls.public_verbs %}
 
 /**
- * @brief Public get for {{ class_name }}. Enters vii through the local transport.
+ * @brief Build the internal {{ v.verb.name }} call for {{ cls.name }} and dispatch it.
  *
  * @param[in,out] msg Call message
- * @return The vii status.
+ * @return The dispatch status.
  */
-v_status_t vi_{{ class_name }}_get(vi_msg_t *msg)
+v_status_t vi_{{ cls.name }}_{{ v.verb.name }}(vi_msg_t *msg)
 {
-    vta_msg_t call;
+    vii_msg_t call;
 
     if (msg == NULL) {
         return V_STATUS_INVALID_PARAMETER;
     }
-{% if singleton %}
+{% if cls.singleton %}
     msg->key = NULL;
     msg->key_len = 0;
 {% endif %}
-    call.class_id = V_CLASS_{{ class_ident }};
+    call.class_id = V_CLASS_{{ cls.ident }};
     call.origin = V_ORIGIN_EXTERNAL;
-    call.verb = V_VERB_GET;
-    call.major = VII_{{ class_ident }}_MAJOR;
-    call.minor = VII_{{ class_ident }}_MINOR;
+    call.verb = {{ v.verb.c_ident }};
+    call.major = VII_{{ cls.ident }}_MAJOR;
+    call.minor = VII_{{ cls.ident }}_MINOR;
     call.msg = msg;
-    return vta_dispatch(&call);
+    return vii_dispatch(&call);
 }
-{% elif name == "subscribe" %}
-
-/**
- * @brief Public subscribe for {{ class_name }}. Enters vii through the local transport.
- *
- * @param[in,out] msg Call message
- * @return The vii status.
- */
-v_status_t vi_{{ class_name }}_subscribe(vi_msg_t *msg)
-{
-    vta_msg_t call;
-
-    if (msg == NULL) {
-        return V_STATUS_INVALID_PARAMETER;
-    }
-{% if singleton %}
-    msg->key = NULL;
-    msg->key_len = 0;
-{% endif %}
-    call.class_id = V_CLASS_{{ class_ident }};
-    call.origin = V_ORIGIN_EXTERNAL;
-    call.verb = V_VERB_SUBSCRIBE;
-    call.major = VII_{{ class_ident }}_MAJOR;
-    call.minor = VII_{{ class_ident }}_MINOR;
-    call.msg = msg;
-    return vta_dispatch(&call);
-}
-{% elif name == "unsubscribe" %}
-
-/**
- * @brief Public unsubscribe for {{ class_name }}. Enters vii through the local transport.
- *
- * @param[in,out] msg Call message
- * @return The vii status.
- */
-v_status_t vi_{{ class_name }}_unsubscribe(vi_msg_t *msg)
-{
-    vta_msg_t call;
-
-    if (msg == NULL) {
-        return V_STATUS_INVALID_PARAMETER;
-    }
-{% if singleton %}
-    msg->key = NULL;
-    msg->key_len = 0;
-{% endif %}
-    call.class_id = V_CLASS_{{ class_ident }};
-    call.origin = V_ORIGIN_EXTERNAL;
-    call.verb = V_VERB_UNSUBSCRIBE;
-    call.major = VII_{{ class_ident }}_MAJOR;
-    call.minor = VII_{{ class_ident }}_MINOR;
-    call.msg = msg;
-    return vta_dispatch(&call);
-}
-{% endif %}
 {% endfor %}

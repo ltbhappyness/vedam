@@ -9,18 +9,17 @@
  */
 #include "vi/class/wasm.h"
 #include "vii/class/wasm.h"
-
-#include "vti/dispatch.h"
+#include "vii/dispatch.h"
 
 /**
- * @brief Public get for wasm. Enters vii through the local transport.
+ * @brief Build the internal get call for wasm and dispatch it.
  *
  * @param[in,out] msg Call message
- * @return The vii status.
+ * @return The dispatch status.
  */
 v_status_t vi_wasm_get(vi_msg_t *msg)
 {
-    vta_msg_t call;
+    vii_msg_t call;
 
     if (msg == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -33,18 +32,18 @@ v_status_t vi_wasm_get(vi_msg_t *msg)
     call.major = VII_WASM_MAJOR;
     call.minor = VII_WASM_MINOR;
     call.msg = msg;
-    return vta_dispatch(&call);
+    return vii_dispatch(&call);
 }
 
 /**
- * @brief Public subscribe for wasm. Enters vii through the local transport.
+ * @brief Build the internal subscribe call for wasm and dispatch it.
  *
  * @param[in,out] msg Call message
- * @return The vii status.
+ * @return The dispatch status.
  */
 v_status_t vi_wasm_subscribe(vi_msg_t *msg)
 {
-    vta_msg_t call;
+    vii_msg_t call;
 
     if (msg == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -57,18 +56,18 @@ v_status_t vi_wasm_subscribe(vi_msg_t *msg)
     call.major = VII_WASM_MAJOR;
     call.minor = VII_WASM_MINOR;
     call.msg = msg;
-    return vta_dispatch(&call);
+    return vii_dispatch(&call);
 }
 
 /**
- * @brief Public unsubscribe for wasm. Enters vii through the local transport.
+ * @brief Build the internal unsubscribe call for wasm and dispatch it.
  *
  * @param[in,out] msg Call message
- * @return The vii status.
+ * @return The dispatch status.
  */
 v_status_t vi_wasm_unsubscribe(vi_msg_t *msg)
 {
-    vta_msg_t call;
+    vii_msg_t call;
 
     if (msg == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -81,5 +80,5 @@ v_status_t vi_wasm_unsubscribe(vi_msg_t *msg)
     call.major = VII_WASM_MAJOR;
     call.minor = VII_WASM_MINOR;
     call.msg = msg;
-    return vta_dispatch(&call);
+    return vii_dispatch(&call);
 }

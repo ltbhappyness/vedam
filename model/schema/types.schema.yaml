@@ -1,0 +1,203 @@
+# Copyright (C) 2026 LTBH Vedam project
+# SPDX-License-Identifier: AGPL-3.0-only
+# A changed copy of Vedam is not called Vedam.
+# An application that only calls Vedam keeps its own license. See LICENSE.
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Vedam shared types
+description: >-
+  The rule for model/types.yaml. This file holds what every class shares: the
+  status codes, the class list, the value kinds, the flag vocabulary, and the
+  verbs. A map keyed by name uses additionalProperties for its value shape.
+  Every other object rejects a key this schema does not name.
+type: object
+additionalProperties: false
+required: [package, status, classes, proto_status, kinds, builtin_types, attr_flags, verbs]
+properties:
+  package:
+    description: >-
+      The short name of the platform. Write vedam. The generator uses it as the
+      first part of every protobuf package.
+    type: string
+    pattern: "^[a-z][a-z0-9]*$"
+  status:
+    description: >-
+      Every status code a verb can return, in the order of the C enum. A new
+      code is appended. A value never changes meaning.
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, value, comment]
+      properties:
+        name:
+          description: >-
+            The code name in capitals, without the V_STATUS_ prefix. A name that
+            ends in _0 is the base of an indexed family: the caller adds the
+            zero-based attribute index.
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]*$"
+        value:
+          description: The integer value. Zero is success. Failures are negative.
+          type: integer
+        comment:
+          description: >-
+            One or two sentences for the caller: when the code appears, and what
+            to do with the outputs.
+          type: string
+          minLength: 1
+  classes:
+    description: >-
+      Every class the node serves. A class here must have a file in
+      model/classes/ whose stem is the lower-case name.
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, id, comment]
+      properties:
+        name:
+          description: The class name in capitals. The C enumerator is V_CLASS_ plus this name.
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]*$"
+        id:
+          description: >-
+            The class index on this node. It is unique, it starts at 1, and it
+            indexes the class table. Zero is reserved for unspecified.
+          type: integer
+          minimum: 1
+          maximum: 255
+        comment:
+          description: One sentence that says what objects the class holds.
+          type: string
+          minLength: 1
+  proto_status:
+    description: >-
+      The protobuf StatusCode names, in wire order. The first entry is
+      UNSPECIFIED and the second is OK. An indexed C family maps to one name.
+    type: array
+    minItems: 2
+    items:
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]*$"
+  kinds:
+    description: >-
+      The closed set of value shapes. Every attribute type resolves to exactly
+      one kind. Add a kind only when the C union, the codec, and the checks all
+      learn it in the same change.
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, member, proto_field, proto_type, integer, get_needs, comment]
+      properties:
+        name:
+          description: The kind name in capitals. The C enumerator is VII_T_ plus this name.
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]*$"
+        member:
+          description: The v_attr_value_t union member that carries this kind in C.
+          type: string
+          pattern: "^[a-z][a-z0-9_]*$"
+        proto_field:
+          description: The AttrValue oneof field that carries this kind on the wire.
+          type: string
+          pattern: "^[a-z][a-z0-9_]*$"
+        proto_type:
+          description: >-
+            The protobuf type of one value of this kind, as a reader of the
+            protobuf file sees it: a scalar such as uint32, or a full message
+            name such as vedam.v1.Version. A struct member of this kind uses it,
+            and AttrRules.type shows it for a builtin type.
+          type: string
+          pattern: "^[a-z][A-Za-z0-9_.]*$"
+        integer:
+          description: >-
+            True when the value is a whole number. Only an integer kind may carry
+            a range.
+          type: boolean
+        get_needs:
+          description: >-
+            What the caller must set before a get. none means nothing. buffer
+            means a buffer and its room: buf and len for text, items and count
+            for a list. pointer means value.ptr to a caller-owned struct.
+          enum: [none, buffer, pointer]
+        comment:
+          description: One sentence that says what the value is and what a get needs.
+          type: string
+          minLength: 1
+  builtin_types:
+    description: >-
+      Shared C types an attribute may name, mapped to their kind. A class enum
+      or struct is declared in its class file instead.
+    type: object
+    minProperties: 1
+    propertyNames:
+      pattern: "^v[a-z0-9_]*_t$"
+    additionalProperties:
+      description: The kind name from kinds.
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]*$"
+  attr_flags:
+    description: >-
+      The flag vocabulary for attributes, in bit order. The C enumerator is
+      VII_F_ plus the name, and the bit is the position in this list.
+    type: array
+    minItems: 1
+    maxItems: 16
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, comment]
+      properties:
+        name:
+          description: The flag name in capitals.
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]*$"
+        comment:
+          description: >-
+            One sentence for a caller of the protobuf file: what this flag lets
+            or stops them doing.
+          type: string
+          minLength: 1
+  verbs:
+    description: >-
+      One row per verb in V_VERB_* order. The C enum, the per-verb rules, the
+      gRPC method names, and the public verb comments come from these rows.
+    type: array
+    minItems: 1
+    maxItems: 32
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, method, writes_values, collapse, checks_list, public_doc]
+      properties:
+        name:
+          description: The verb name in lower case. The C enumerator is V_VERB_ plus it in capitals.
+          type: string
+          pattern: "^[a-z][a-z0-9_]*$"
+        method:
+          description: The gRPC method name, Pascal case, as it appears in the service path.
+          type: string
+          pattern: "^[A-Z][A-Za-z0-9]*$"
+        writes_values:
+          description: >-
+            True when the caller sends values on this verb. Range, enum, and
+            length checks run only on such a verb.
+          type: boolean
+        collapse:
+          description: True when a repeated attribute id keeps only its last entry before the checks.
+          type: boolean
+        checks_list:
+          description: >-
+            True when the attribute list is checked before the body runs. False
+            means the verb only needs a message.
+          type: boolean
+        public_doc:
+          description: >-
+            The comment on the public C prototype. The first line is the brief.
+            A blank line follows, then the details for the caller.
+          type: string
+          minLength: 1

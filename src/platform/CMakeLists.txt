@@ -8,3 +8,4 @@ vedam_module(vedam_platform
     posix/process.c
     posix/futex.c
 )
+target_link_libraries(vedam_platform PUBLIC Threads::Threads rt)

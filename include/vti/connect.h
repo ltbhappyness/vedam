@@ -8,8 +8,8 @@
 #ifndef VTI_CONNECT_H
 #define VTI_CONNECT_H
 
-#include "vii/types.h"
+#include "vti/vti.h"
 
-extern const vta_ops_t vta_connect_ops;
+extern const vti_ops_t vti_connect_ops;
 
 #endif

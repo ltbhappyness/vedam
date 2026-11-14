@@ -7,11 +7,11 @@
  */
 #include "lock/store.h"
 
-#include "core/core.h"
+#include "core/node.h"
 #include "ds/hash.h"
 #include "lock/lock.h"
 #include "platform/platform.h"
-#include "vti/class_uuid.h"
+#include "vii/meta.h"
 
 #include <stdatomic.h>
 
@@ -68,8 +68,6 @@ enum {
     VEDAM_LOCK_LIST_MAX = 32,
     VEDAM_LOCK_ID_STACK = 32
 };
-
-int vedam_lock_attr_known(v_class_id_t class_id, v_attr_id_t id);
 
 /**
  * @brief Return non-zero while this thread is inside vedam_lock_invoke.
@@ -601,19 +599,12 @@ out_key:
 static struct vedam_lock_object *pin_object(struct vedam_lockdb *db, v_class_id_t class_id,
                                             const void *key, vuint32_t key_len, int *err)
 {
-    int singleton;
-
     *err = 0;
     if (class_id == V_CLASS_UNSPECIFIED || class_id > V_CLASS_ID_MAX) {
         *err = (int)V_STATUS_INVALID_PARAMETER;
         return NULL;
     }
-    singleton = vedam_lock_class_singleton(class_id);
-    if (singleton < 0) {
-        *err = (int)V_STATUS_INVALID_PARAMETER;
-        return NULL;
-    }
-    if (singleton) {
+    if (vedam_node()->classes[class_id].singleton) {
         if (key_len != 0) {
             *err = (int)V_STATUS_INVALID_PARAMETER;
             return NULL;
@@ -835,7 +826,8 @@ static int take_locks(struct invoke_args *args)
                 }
                 continue;
             }
-            if (id >= VEDAM_LOCK_ATTR_MAX || !vedam_lock_attr_known(args->class_id, id)) {
+            if (id >= VEDAM_LOCK_ATTR_MAX ||
+                vii_attr_lookup(&vedam_node()->classes[args->class_id], id) == NULL) {
                 st = (v_status_t)(V_STATUS_UNKNOWN_ATTRIBUTE_0 - (vint32_t)i);
             }
             if (args->status_list != NULL) {
@@ -963,7 +955,7 @@ v_status_t vedam_lockdb_open(vedam_t *node)
     v_status_t rc;
     v_class_id_t id;
 
-    if (node == NULL) {
+    if (node == NULL || node->classes == NULL) {
         return V_STATUS_INVALID_PARAMETER;
     }
     db = vplatform_calloc(1, sizeof(*db));
@@ -978,7 +970,7 @@ v_status_t vedam_lockdb_open(vedam_t *node)
     atomic_init(&db->gate, 0);
     atomic_init(&db->miss_count, 0);
     for (id = (v_class_id_t)1; id <= V_CLASS_ID_MAX; id++) {
-        if (vedam_lock_class_singleton(id) == 0) {
+        if (!node->classes[id].singleton) {
             rc = vds_hash_create(&db->keyed[id], 32);
             if (rc != V_STATUS_SUCCESS) {
                 while (id > 1) {

@@ -13,15 +13,16 @@ Library bodies (`vlib_*`) return success and do not store values yet.
 ## Layout
 
 ```
-tools/codegen/           YAML and one Jinja template per output kind
+model/                   Class and shared-type YAML, and the JSON Schema that checks them
+tools/codegen/           Generator and one Jinja template per output kind
 include/vi/              Public C API (installed)
 include/vii/             Internal contract, including older UUID lines
 include/lib/             vlib_* declarations
 include/core/            Process node
 include/lock/            Wait-Die wrapper
 include/vti/             Transport and protobuf headers (not installed)
-src/va/                  Public verbs: pointer in, local dispatch
-src/via/                 Contract checks, then vlib_*
+src/va/                  Public verbs: pointer in, vii_dispatch
+src/via/                 vii_dispatch, the class table, contract checks, then vlib_*
 src/lib/                 Empty vertical bodies
 src/core/core.c          vedam_init / vedam_deinit
 src/lock/                Object and attribute locks
@@ -32,11 +33,11 @@ src/vta/grpc/            Temporary HTTP on TCP
 src/vta/grpc_uds/        Temporary HTTP on a Unix socket
 src/vta/connect/         Connect/QUIC stub, no socket
 src/vedamd/              Daemon: public headers only, then wait
-proto/                   vedam-interface submodule (proto/vedam/*.proto)
+proto/                   vedam-interface submodule (proto/vedam/<class>/v1/<class>.proto)
 examples/                Programs that include only vi/
 ```
 
-Adding a vertical is a YAML file plus a row in `tools/codegen/src/types.yaml`. The generator writes the headers, the thin bodies, the dispatch row, and `proto/vedam/<name>.proto`.
+Adding a vertical is a YAML file in `model/classes/` plus a row in `model/types.yaml`. The generator checks both against `model/schema/`, then writes the headers, the thin bodies, the class table row, and `proto/vedam/<name>/v1/<name>.proto`.
 
 ## Transports at init
 
@@ -56,7 +57,7 @@ A remote client connects once. Further calls on that descriptor reuse the socket
 
 ## Codegen and build
 
-Needs: CMake, a C11 compiler, C++17, `protoc` and `libprotobuf`, Python 3 with `PyYAML` and `Jinja2`.
+Needs: CMake, a C11 compiler, C++17, `protoc` and `libprotobuf`, Python 3 with `PyYAML`, `Jinja2`, and `jsonschema`.
 
 ```bash
 cd vedam
@@ -69,7 +70,7 @@ ctest --test-dir build --output-on-failure
 
 Install prefix defaults to `build/install` (`include/vi`, `libvedam`, `vedamd`). Shared library: `cmake -B build -DBUILD_SHARED_LIBS=ON`.
 
-CMake reruns the generator when YAML or templates change.
+CMake reruns the generator when YAML or templates change. `python3 tools/codegen/generate.py --root . --check` compares the tree with a fresh render and writes nothing.
 
 ## Tests
 

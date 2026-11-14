@@ -5,27 +5,25 @@
  * A changed copy of Vedam is not called Vedam.
  * An application that only calls Vedam keeps its own license. See LICENSE.
  */
-#include "vti/vta.h"
+#include "vti/vti.h"
 
-#include "core/core.h"
-#include "lock/store.h"
+#include "core/node.h"
 #include "platform/platform.h"
-#include "vti/dispatch.h"
 
 /**
  * @brief Allocate an empty transport descriptor for @p link.
  *
- * @param[in] link VTA_LINK_LOCAL, VTA_LINK_IPC, or VTA_LINK_REMOTE
+ * @param[in] link VTI_LINK_LOCAL, VTI_LINK_IPC, or VTI_LINK_REMOTE
  * @return A new descriptor, or NULL when the node is missing or allocation fails.
  */
-vta_desc_t *vta_open(int link)
+vti_desc_t *vti_open(int link)
 {
-    const vta_ops_t *ops = NULL;
-    vta_desc_t *desc;
+    const vti_ops_t *ops = NULL;
+    vti_desc_t *desc;
     vedam_t *node;
 
     node = vedam_node();
-    if (node == NULL || (unsigned)link >= VTA_LINK_COUNT) {
+    if (node == NULL || (unsigned)link >= VTI_LINK_COUNT) {
         return NULL;
     }
 
@@ -49,7 +47,7 @@ vta_desc_t *vta_open(int link)
  *
  * @param[in] desc Transport descriptor
  */
-void vta_close(vta_desc_t *desc)
+void vti_close(vti_desc_t *desc)
 {
     if (desc == NULL) {
         return;
@@ -67,7 +65,7 @@ void vta_close(vta_desc_t *desc)
  * @param[in] address Listen address for this link
  * @return The transport listen status.
  */
-v_status_t vta_listen(vta_desc_t *desc, const char *address)
+v_status_t vti_listen(vti_desc_t *desc, const char *address)
 {
     if (desc == NULL || desc->ops == NULL || desc->ops->listen == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -82,7 +80,7 @@ v_status_t vta_listen(vta_desc_t *desc, const char *address)
  * @param[out] client Receives the accepted descriptor
  * @return The transport accept status.
  */
-v_status_t vta_accept(vta_desc_t *desc, vta_desc_t **client)
+v_status_t vti_accept(vti_desc_t *desc, vti_desc_t **client)
 {
     if (desc == NULL || desc->ops == NULL || desc->ops->accept == NULL || client == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -97,7 +95,7 @@ v_status_t vta_accept(vta_desc_t *desc, vta_desc_t **client)
  * @param[in] address Peer address
  * @return The transport connect status.
  */
-v_status_t vta_connect(vta_desc_t *desc, const char *address)
+v_status_t vti_connect(vti_desc_t *desc, const char *address)
 {
     if (desc == NULL || desc->ops == NULL || desc->ops->connect == NULL) {
         return V_STATUS_INVALID_PARAMETER;
@@ -115,14 +113,7 @@ v_status_t vta_connect(vta_desc_t *desc, const char *address)
  * @param[in,out] msg  Call and reply message
  * @return The transport or dispatch status.
  */
-v_status_t vta_call(vta_desc_t *desc, vta_msg_t *msg)
+v_status_t vti_call(vti_desc_t *desc, vii_msg_t *msg)
 {
-    if (desc == NULL || desc->ops == NULL || desc->ops->call == NULL || msg == NULL) {
-        return V_STATUS_INVALID_PARAMETER;
-    }
-    if (desc->link != VTA_LINK_LOCAL && vedam_lock_in_attempt()) {
-        return V_STATUS_FAILED_PRECONDITION;
-    }
-
-    return desc->ops->call(desc, msg);
+    return vedam_node_call(desc, msg);
 }

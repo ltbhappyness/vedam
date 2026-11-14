@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 struct grpc_uds_ctx {
-    struct vta_http_pool pool;
+    struct vti_http_pool pool;
     int fd;
     int running;
     char path[108];
@@ -29,7 +29,7 @@ struct grpc_uds_ctx {
  * @param[in] desc Argument desc
  * @return Result of uds_close.
  */
-static v_status_t uds_close(vta_desc_t *desc)
+static v_status_t uds_close(vti_desc_t *desc)
 {
     struct grpc_uds_ctx *c = (struct grpc_uds_ctx *)desc->ctx;
 
@@ -37,10 +37,10 @@ static v_status_t uds_close(vta_desc_t *desc)
         return V_STATUS_SUCCESS;
     }
     if (c->running) {
-        vta_http_pool_stop(&c->pool);
+        vti_http_pool_stop(&c->pool);
         c->running = 0;
     }
-    vta_grpc_unbind(c->fd, c->path);
+    vti_grpc_unbind(c->fd, c->path);
     c->fd = -1;
     vplatform_free(c);
     desc->ctx = NULL;
@@ -91,7 +91,7 @@ out_close:
  * @param[in] address Argument address
  * @return Result of uds_listen.
  */
-static v_status_t uds_listen(vta_desc_t *desc, const char *address)
+static v_status_t uds_listen(vti_desc_t *desc, const char *address)
 {
     struct grpc_uds_ctx *c;
     int rc;
@@ -115,7 +115,7 @@ static v_status_t uds_listen(vta_desc_t *desc, const char *address)
         goto out_free;
     }
 
-    rc = vta_http_pool_start(&c->pool, c->fd);
+    rc = vti_http_pool_start(&c->pool, c->fd);
     if (rc != 0) {
         goto out_unbind;
     }
@@ -125,7 +125,7 @@ static v_status_t uds_listen(vta_desc_t *desc, const char *address)
     return V_STATUS_SUCCESS;
 
 out_unbind:
-    vta_grpc_unbind(c->fd, c->path);
+    vti_grpc_unbind(c->fd, c->path);
     c->fd = -1;
 out_free:
     vplatform_free(c);
@@ -139,7 +139,7 @@ out_free:
  * @param[in] client Argument client
  * @return Result of uds_accept.
  */
-static v_status_t uds_accept(vta_desc_t *desc, vta_desc_t **client)
+static v_status_t uds_accept(vti_desc_t *desc, vti_desc_t **client)
 {
     (void)desc;
     (void)client;
@@ -152,7 +152,7 @@ static v_status_t uds_accept(vta_desc_t *desc, vta_desc_t **client)
  * @param[in] address Argument address
  * @return Result of uds_connect.
  */
-static v_status_t uds_connect(vta_desc_t *desc, const char *address)
+static v_status_t uds_connect(vti_desc_t *desc, const char *address)
 {
     (void)desc;
     (void)address;
@@ -166,14 +166,14 @@ static v_status_t uds_connect(vta_desc_t *desc, const char *address)
  * @param[in,out] msg  Call message
  * @return V_STATUS_NOT_IMPLEMENTED.
  */
-static v_status_t uds_call(vta_desc_t *desc, vta_msg_t *msg)
+static v_status_t uds_call(vti_desc_t *desc, vii_msg_t *msg)
 {
     (void)desc;
     (void)msg;
     return V_STATUS_NOT_IMPLEMENTED;
 }
 
-const vta_ops_t vta_grpc_uds_ops = {
+const vti_ops_t vti_grpc_uds_ops = {
     .close = uds_close,
     .listen = uds_listen,
     .accept = uds_accept,

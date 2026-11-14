@@ -1,0 +1,96 @@
+class: system
+singleton: true
+datastore: none
+
+# Public id is UUID v5 of vertical/major/minor/commit under the Vedam namespace.
+# The commit is the constant that opened that major.minor line. Do not run git here.
+uuid_lines:
+  - major: 1
+    minor: 0
+    commit: "312808c619d5ce0b59c5a6cfee1f4e297b4a6a4c"
+
+enums:
+  - c_type: vi_system_node_class_t
+    prefix: VI_SYSTEM_NODE_CLASS_
+    values:
+      - {name: UNSPECIFIED, value: 0, comment: No role has been chosen.}
+      - {name: A, value: 1, comment: Archive. Keeps a full copy of agreed history.}
+      - {name: B, value: 2, comment: Full check of agreed history.}
+      - {name: C, value: 3, comment: Light operator. Default for this process.}
+      - {name: D, value: 4, comment: Small gateway.}
+      - {name: E, value: 5, comment: Thin client.}
+  - c_type: vi_system_state_e
+    prefix: VI_SYSTEM_STATE_
+    proto_name: SystemStateKind
+    values:
+      - {name: UNSPECIFIED, value: 0, comment: State has not been set.}
+      - {name: STARTING, value: 1, comment: Create has started. Get is not ready.}
+      - {name: READY, value: 2, comment: Transports are up. Get and subscribe are allowed.}
+      - {name: DEGRADED, value: 3, comment: The process is up with a reduced set of transports.}
+      - {name: DRAINING, value: 4, comment: The process is finishing work and will stop.}
+      - {name: DEAD, value: 5, comment: The process has stopped. Get returns uninitialized.}
+
+structs:
+  - c_type: vi_system_state_t
+    fields:
+      - {type: vi_system_state_e, name: operational, comment: Where the process is in its life.}
+      - {type: vuint32_t, name: reserved, count: 8, wire: false, comment: Kept zero by the node.}
+
+# One System object per process. Callers pass an attribute list only.
+# Public verbs: get, subscribe, unsubscribe.
+# Create, set, delete, and notify are not in the public header or proto.
+
+verbs:
+  get:
+    visibility: public
+    comment: Fill the values for the attribute ids in the list.
+  subscribe:
+    visibility: public
+    stream: false
+    comment: Register a watch for the attribute ids in the list. This call returns once.
+  unsubscribe:
+    visibility: public
+    comment: Stop watches for the same caller and the same attribute id list. An empty list stops all watches for that caller.
+  create:
+    visibility: internal
+    comment: Bring up the singleton. Public callers must not use this verb.
+  set:
+    visibility: internal
+    comment: Change attributes that allow set. Not in the public header in this slice.
+  delete:
+    visibility: internal
+    comment: Tear down the singleton.
+  notify:
+    visibility: internal
+    stream: true
+    comment: Push changed attributes to current subscribers.
+
+attrs:
+  NODE_CLASS:
+    id: 1
+    type: vi_system_node_class_t
+    visibility: public
+    flags_public: [READ_ONLY]
+    flags_internal: [READ_ONLY]
+    comment: Role of this process. A is archive, B is full validator, C is a light operator, D is a small gateway, E is a thin web client.
+  PROTOCOL_VERSION:
+    id: 2
+    type: v_version_t
+    visibility: public
+    flags_public: [READ_ONLY, SUBSCRIBABLE]
+    flags_internal: [READ_ONLY, SUBSCRIBABLE]
+    comment: Agreed message version for this node. This era always reports major 0 and minor 1.
+  SYSTEM_STATE:
+    id: 3
+    type: vi_system_state_t
+    visibility: public
+    flags_public: [READ_ONLY, SUBSCRIBABLE]
+    flags_internal: [READ_ONLY, SUBSCRIBABLE]
+    comment: Whether the process is starting, ready, degraded, draining, or dead. Pass value.ptr to a caller-owned vi_system_state_t.
+  RELEASE_COMMIT:
+    id: 4
+    type: v_text_t
+    visibility: public
+    flags_public: [READ_ONLY]
+    flags_internal: [READ_ONLY]
+    comment: Commit of the running build, for a person to read. Not an input to the vertical UUID.
