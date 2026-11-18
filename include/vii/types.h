@@ -30,8 +30,9 @@ typedef enum _v_class_id_t {
     V_CLASS_IDENTITY = 2, /**< Identity objects keyed by the caller object id. */
     V_CLASS_STORAGE = 3, /**< Storage objects keyed by the caller object id. */
     V_CLASS_SECURITY = 4, /**< The process security singleton. */
-    V_CLASS_WASM = 5, /**< The process WebAssembly configuration singleton. */
-    V_CLASS_ID_MAX = 5
+    V_CLASS_CONTRACT = 5, /**< A program that decides whether a command may be logged. */
+    V_CLASS_PLUGIN = 6, /**< A program one node loads for itself and other nodes do not replay. */
+    V_CLASS_ID_MAX = 6
 } v_class_id_t;
 
 /**

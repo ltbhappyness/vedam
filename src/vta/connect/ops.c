@@ -10,6 +10,8 @@
  */
 #include "vti/connect.h"
 
+#if VEDAM_ENABLE_CONNECT
+
 #include "util/log.h"
 #include "util/trace.h"
 
@@ -87,3 +89,5 @@ const vti_ops_t vti_connect_ops = {
     .connect = conn_connect,
     .call = conn_call,
 };
+
+#endif /* VEDAM_ENABLE_CONNECT */

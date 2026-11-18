@@ -2,7 +2,7 @@
 
 set(CODEGEN "${CMAKE_SOURCE_DIR}/tools/codegen")
 set(MODEL "${CMAKE_SOURCE_DIR}/model")
-set(VEDAM_CLASSES system identity storage security wasm)
+set(VEDAM_CLASSES system identity storage security contract plugin)
 
 set(GEN_TREE
     ${CMAKE_SOURCE_DIR}/include/vi/types.h
@@ -62,4 +62,34 @@ add_custom_command(
     COMMENT "Generating headers, va, via classes, proto, and vti into the source tree"
 )
 
-add_custom_target(vedam_codegen DEPENDS ${GEN_TREE})
+# .config is the committed selection. VEDAM_CONFIG_FILE, when set, is another
+# file for this configure only. It is not written back over .config.
+set(VEDAM_SCHEMA "${CMAKE_SOURCE_DIR}/config/config.schema.yaml")
+set(VEDAM_CONFIG_HEADER "${CMAKE_BINARY_DIR}/vedam_config.h")
+set(VEDAM_CONFIG_CMAKE "${CMAKE_BINARY_DIR}/vedam_config.cmake")
+set(VEDAM_SELECTED_CONFIG "${CMAKE_SOURCE_DIR}/.config")
+if(DEFINED VEDAM_CONFIG_FILE AND NOT "${VEDAM_CONFIG_FILE}" STREQUAL "")
+    set(VEDAM_SELECTED_CONFIG "${VEDAM_CONFIG_FILE}")
+endif()
+unset(VEDAM_CONFIG_FILE CACHE)
+if(NOT EXISTS "${VEDAM_SELECTED_CONFIG}")
+    message(FATAL_ERROR "config file is missing: ${VEDAM_SELECTED_CONFIG}")
+endif()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${VEDAM_SELECTED_CONFIG}"
+    "${VEDAM_SCHEMA}"
+    "${CMAKE_SOURCE_DIR}/tools/config/gen_config.py")
+execute_process(
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/config/gen_config.py
+            --schema ${VEDAM_SCHEMA}
+            --defconfig ${VEDAM_SELECTED_CONFIG}
+            --out ${VEDAM_CONFIG_HEADER}
+            --cmake ${VEDAM_CONFIG_CMAKE}
+    RESULT_VARIABLE vedam_config_rc
+    ERROR_VARIABLE vedam_config_err)
+if(NOT vedam_config_rc EQUAL 0)
+    message(FATAL_ERROR "vedam config failed: ${vedam_config_err}")
+endif()
+include(${VEDAM_CONFIG_CMAKE})
+
+add_custom_target(vedam_codegen DEPENDS ${GEN_TREE} ${VEDAM_CONFIG_HEADER})

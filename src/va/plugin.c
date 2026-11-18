@@ -7,17 +7,17 @@
  *
  * THIS IS GENERATED CODE AND DO NOT EDIT
  */
-#include "vi/class/wasm.h"
-#include "vii/class/wasm.h"
+#include "vi/class/plugin.h"
+#include "vii/class/plugin.h"
 #include "vii/dispatch.h"
 
 /**
- * @brief Build the internal get call for wasm and dispatch it.
+ * @brief Build the internal get call for plugin and dispatch it.
  *
  * @param[in,out] msg Call message
  * @return The dispatch status.
  */
-v_status_t vi_wasm_get(vi_msg_t *msg)
+v_status_t vi_plugin_get(vi_msg_t *msg)
 {
     vii_msg_t call;
 
@@ -26,22 +26,22 @@ v_status_t vi_wasm_get(vi_msg_t *msg)
     }
     msg->key = NULL;
     msg->key_len = 0;
-    call.class_id = V_CLASS_WASM;
+    call.class_id = V_CLASS_PLUGIN;
     call.origin = V_ORIGIN_EXTERNAL;
     call.verb = V_VERB_GET;
-    call.major = VII_WASM_MAJOR;
-    call.minor = VII_WASM_MINOR;
+    call.major = VII_PLUGIN_MAJOR;
+    call.minor = VII_PLUGIN_MINOR;
     call.msg = msg;
     return vii_dispatch(&call);
 }
 
 /**
- * @brief Build the internal subscribe call for wasm and dispatch it.
+ * @brief Build the internal subscribe call for plugin and dispatch it.
  *
  * @param[in,out] msg Call message
  * @return The dispatch status.
  */
-v_status_t vi_wasm_subscribe(vi_msg_t *msg)
+v_status_t vi_plugin_subscribe(vi_msg_t *msg)
 {
     vii_msg_t call;
 
@@ -50,22 +50,22 @@ v_status_t vi_wasm_subscribe(vi_msg_t *msg)
     }
     msg->key = NULL;
     msg->key_len = 0;
-    call.class_id = V_CLASS_WASM;
+    call.class_id = V_CLASS_PLUGIN;
     call.origin = V_ORIGIN_EXTERNAL;
     call.verb = V_VERB_SUBSCRIBE;
-    call.major = VII_WASM_MAJOR;
-    call.minor = VII_WASM_MINOR;
+    call.major = VII_PLUGIN_MAJOR;
+    call.minor = VII_PLUGIN_MINOR;
     call.msg = msg;
     return vii_dispatch(&call);
 }
 
 /**
- * @brief Build the internal unsubscribe call for wasm and dispatch it.
+ * @brief Build the internal unsubscribe call for plugin and dispatch it.
  *
  * @param[in,out] msg Call message
  * @return The dispatch status.
  */
-v_status_t vi_wasm_unsubscribe(vi_msg_t *msg)
+v_status_t vi_plugin_unsubscribe(vi_msg_t *msg)
 {
     vii_msg_t call;
 
@@ -74,11 +74,11 @@ v_status_t vi_wasm_unsubscribe(vi_msg_t *msg)
     }
     msg->key = NULL;
     msg->key_len = 0;
-    call.class_id = V_CLASS_WASM;
+    call.class_id = V_CLASS_PLUGIN;
     call.origin = V_ORIGIN_EXTERNAL;
     call.verb = V_VERB_UNSUBSCRIBE;
-    call.major = VII_WASM_MAJOR;
-    call.minor = VII_WASM_MINOR;
+    call.major = VII_PLUGIN_MAJOR;
+    call.minor = VII_PLUGIN_MINOR;
     call.msg = msg;
     return vii_dispatch(&call);
 }

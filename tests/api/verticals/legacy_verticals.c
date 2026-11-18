@@ -5,15 +5,16 @@
  * A changed copy of Vedam is not called Vedam.
  * An application that only calls Vedam keeps its own license. See LICENSE.
  *
- * Gets across the five verticals, UUID table checks, and lock miss counting.
+ * Gets across the verticals, UUID table checks, and lock miss counting.
  */
 #include "core/node.h"
 #include "lock/store.h"
+#include "vi/class/contract.h"
 #include "vi/class/identity.h"
+#include "vi/class/plugin.h"
 #include "vi/class/security.h"
 #include "vi/class/storage.h"
 #include "vi/class/system.h"
-#include "vi/class/wasm.h"
 #include "vi/vedam.h"
 #include "vti/class_uuid.h"
 
@@ -56,6 +57,20 @@ static v_status_t get_one(v_status_t (*fn)(vi_msg_t *), v_attr_id_t id, const vo
     return rc;
 }
 
+/**
+ * @brief Call @p fn with an empty attribute list.
+ *
+ * @param[in] fn Public verb
+ * @return The call status.
+ */
+static v_status_t get_empty(v_status_t (*fn)(vi_msg_t *))
+{
+    vi_msg_t vim;
+
+    memset(&vim, 0, sizeof(vim));
+    return fn(&vim);
+}
+
 /* RFC 9562 UUID v5 vectors from the Round 6 review packet. */
 static const uint8_t k_system_uuid[16] = {
     0xc2, 0xb9, 0x15, 0x80, 0x60, 0x92, 0x5c, 0x64, 0xbd, 0x0c, 0xea, 0x7f, 0x37, 0x7b, 0x56, 0xc1,
@@ -69,8 +84,11 @@ static const uint8_t k_storage_uuid[16] = {
 static const uint8_t k_security_uuid[16] = {
     0x3d, 0x8d, 0x56, 0x23, 0x8c, 0xa8, 0x58, 0x5f, 0xa4, 0x34, 0x66, 0x4c, 0x1d, 0xf3, 0x8f, 0xfa,
 };
-static const uint8_t k_wasm_uuid[16] = {
-    0x05, 0x3e, 0xf9, 0xba, 0x73, 0x54, 0x58, 0x91, 0xad, 0x47, 0x7a, 0x52, 0x9f, 0x4c, 0x1b, 0x64,
+static const uint8_t k_contract_uuid[16] = {
+    0xf8, 0xc5, 0xc5, 0x5f, 0x54, 0xb9, 0x5e, 0x5b, 0xad, 0xea, 0xd3, 0x92, 0xc8, 0xb4, 0x8c, 0xcd,
+};
+static const uint8_t k_plugin_uuid[16] = {
+    0xc8, 0xb1, 0xba, 0x03, 0xa6, 0x73, 0x5b, 0xa4, 0x95, 0x04, 0x45, 0x23, 0xcf, 0xaf, 0xc7, 0x62,
 };
 
 static int test_uuids(void)
@@ -84,7 +102,8 @@ static int test_uuids(void)
     CHECK(memcmp(vi_identity_uuid, k_identity_uuid, 16) == 0);
     CHECK(memcmp(vi_storage_uuid, k_storage_uuid, 16) == 0);
     CHECK(memcmp(vi_security_uuid, k_security_uuid, 16) == 0);
-    CHECK(memcmp(vi_wasm_uuid, k_wasm_uuid, 16) == 0);
+    CHECK(memcmp(vi_contract_uuid, k_contract_uuid, 16) == 0);
+    CHECK(memcmp(vi_plugin_uuid, k_plugin_uuid, 16) == 0);
 
     st = vedam_init();
     CHECK(st == V_STATUS_SUCCESS);
@@ -100,8 +119,10 @@ static int test_uuids(void)
     CHECK(st == V_STATUS_SUCCESS && id == V_CLASS_STORAGE && major == 1 && minor == 0);
     st = vti_class_from_uuid(vi_security_uuid, &id, &major, &minor);
     CHECK(st == V_STATUS_SUCCESS && id == V_CLASS_SECURITY && major == 1 && minor == 0);
-    st = vti_class_from_uuid(vi_wasm_uuid, &id, &major, &minor);
-    CHECK(st == V_STATUS_SUCCESS && id == V_CLASS_WASM && major == 1 && minor == 0);
+    st = vti_class_from_uuid(vi_contract_uuid, &id, &major, &minor);
+    CHECK(st == V_STATUS_SUCCESS && id == V_CLASS_CONTRACT && major == 1 && minor == 0);
+    st = vti_class_from_uuid(vi_plugin_uuid, &id, &major, &minor);
+    CHECK(st == V_STATUS_SUCCESS && id == V_CLASS_PLUGIN && major == 1 && minor == 0);
 
     vedam_deinit();
     return g_fails;
@@ -138,8 +159,18 @@ static int test_gets(void)
     rc = get_one(vi_security_get, VI_SECURITY_ATTR_PROFILE, NULL, 0, &st);
     CHECK(rc == V_STATUS_SUCCESS && st == V_STATUS_SUCCESS);
 
-    rc = get_one(vi_wasm_get, VI_WASM_ATTR_ENGINE_STATE, NULL, 0, &st);
-    CHECK(rc == V_STATUS_SUCCESS && st == V_STATUS_SUCCESS);
+    rc = get_empty(vi_contract_get);
+#if VEDAM_ENABLE_CONTRACT
+    CHECK(rc == V_STATUS_NOT_IMPLEMENTED);
+#else
+    CHECK(rc == V_STATUS_NOT_SUPPORTED);
+#endif
+    rc = get_empty(vi_plugin_get);
+#if VEDAM_ENABLE_PLUGIN
+    CHECK(rc == V_STATUS_NOT_IMPLEMENTED);
+#else
+    CHECK(rc == V_STATUS_NOT_SUPPORTED);
+#endif
 
     vedam_deinit();
     return g_fails;
@@ -198,9 +229,11 @@ int vedam_legacy_verticals(void)
         return 1;
     }
     g_fails = 0;
+#if VEDAM_ENABLE_WWLOCK
     if (test_miss_hits() != 0) {
         return 1;
     }
+#endif
     printf("verticals tests passed\n");
     return 0;
 }

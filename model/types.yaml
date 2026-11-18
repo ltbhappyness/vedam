@@ -78,9 +78,12 @@ classes:
   - name: SECURITY
     id: 4
     comment: The process security singleton.
-  - name: WASM
+  - name: CONTRACT
     id: 5
-    comment: The process WebAssembly configuration singleton.
+    comment: A program that decides whether a command may be logged.
+  - name: PLUGIN
+    id: 6
+    comment: A program one node loads for itself and other nodes do not replay.
 
 proto_status:
   - UNSPECIFIED

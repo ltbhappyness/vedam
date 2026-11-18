@@ -11,6 +11,8 @@
  */
 #include "vti/grpc.h"
 
+#if VEDAM_ENABLE_GRPC
+
 #include "platform/platform.h"
 #include "util/log.h"
 #include "util/trace.h"
@@ -389,3 +391,5 @@ const vti_ops_t vti_grpc_ops = {
     .connect = grpc_connect,
     .call = grpc_call,
 };
+
+#endif /* VEDAM_ENABLE_GRPC */

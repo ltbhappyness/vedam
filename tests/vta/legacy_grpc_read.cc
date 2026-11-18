@@ -165,7 +165,11 @@ int vedam_legacy_grpc(void)
     if (st != V_STATUS_SUCCESS) {
         return 1;
     }
+#if VEDAM_ENABLE_GRPC
     bound = vti_grpc_bound(vedam_node()->rx[VTI_LINK_REMOTE]);
+#else
+    bound = nullptr;
+#endif
     if (bound == NULL) {
         vedam_deinit();
         return 1;
@@ -202,11 +206,18 @@ int vedam_legacy_grpc(void)
 
 TEST(VtaHttp, LegacySystemGet)
 {
+#if !VEDAM_ENABLE_GRPC
+    GTEST_SKIP() << "grpc disabled in this defconfig";
+#else
     EXPECT_EQ(vedam_legacy_grpc(), 0);
+#endif
 }
 
 TEST(VtaHttp, EmptyCommitWithRealGet)
 {
+#if !VEDAM_ENABLE_GRPC
+    GTEST_SKIP() << "grpc disabled in this defconfig";
+#endif
     vedam::v1::Message req;
     vedam::v1::Message resp;
     std::string payload;
@@ -216,7 +227,11 @@ TEST(VtaHttp, EmptyCommitWithRealGet)
     int rc;
 
     ASSERT_EQ(vedam_init(), V_STATUS_SUCCESS);
+#if VEDAM_ENABLE_GRPC
     bound = vti_grpc_bound(vedam_node()->rx[VTI_LINK_REMOTE]);
+#else
+    bound = nullptr;
+#endif
     colon = bound != nullptr ? std::strrchr(bound, ':') : nullptr;
     port = colon != nullptr ? std::strtoul(colon + 1, nullptr, 10) : 0;
     if (port == 0 || port > 65535ul || wait_tcp(static_cast<uint16_t>(port)) != 0) {
@@ -294,7 +309,11 @@ int start_http(uint16_t *port)
     std::memcpy(g_test_classes, vii_classes, sizeof(g_test_classes));
     g_test_classes[V_CLASS_SYSTEM].body[V_VERB_GET] = test_system_get;
     vedam_node()->classes = g_test_classes;
+#if VEDAM_ENABLE_GRPC
     bound = vti_grpc_bound(vedam_node()->rx[VTI_LINK_REMOTE]);
+#else
+    bound = nullptr;
+#endif
     colon = bound != nullptr ? std::strrchr(bound, ':') : nullptr;
     n = colon != nullptr ? std::strtoul(colon + 1, nullptr, 10) : 0;
     if (n == 0 || n > 65535ul || wait_tcp(static_cast<uint16_t>(n)) != 0) {
@@ -335,6 +354,9 @@ std::string state_and_commit_request()
 
 TEST(VtaHttp, BasicStateAndCommitMatchLocalGet)
 {
+#if !VEDAM_ENABLE_GRPC
+    GTEST_SKIP() << "grpc disabled in this defconfig";
+#endif
     vedam::system::v1::SystemState state;
     vi_system_state_t local_state = {};
     char local_buf[64];
@@ -371,6 +393,9 @@ TEST(VtaHttp, BasicStateAndCommitMatchLocalGet)
 
 TEST(VtaHttp, NegativeOversizeTextIsRefusedAndTheNodeKeepsServing)
 {
+#if !VEDAM_ENABLE_GRPC
+    GTEST_SKIP() << "grpc disabled in this defconfig";
+#endif
     vedam::v1::Message req;
     vedam::v1::Message resp;
     vedam::v1::Attr *attr;

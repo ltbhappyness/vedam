@@ -7,16 +7,18 @@
  *
  * THIS IS GENERATED CODE AND DO NOT EDIT
  */
+#include "lib/contract.h"
 #include "lib/identity.h"
+#include "lib/plugin.h"
 #include "lib/security.h"
 #include "lib/storage.h"
 #include "lib/system.h"
-#include "lib/wasm.h"
+#include "vii/class/contract.h"
 #include "vii/class/identity.h"
+#include "vii/class/plugin.h"
 #include "vii/class/security.h"
 #include "vii/class/storage.h"
 #include "vii/class/system.h"
-#include "vii/class/wasm.h"
 #include "vii/meta.h"
 
 const struct vii_verb_rule vii_verb_rules[V_VERB_COUNT] = {
@@ -28,6 +30,23 @@ const struct vii_verb_rule vii_verb_rules[V_VERB_COUNT] = {
     [V_VERB_UNSUBSCRIBE] = {.collapse = 1, .checks_list = 1, .writes_values = 0},
     [V_VERB_NOTIFY] = {.collapse = 0, .checks_list = 1, .writes_values = 1},
 };
+
+static const struct vii_attr_meta contract_attrs[] = {
+    {
+        .id = 3,
+        .flags = VII_F_READ_ONLY,
+        .kind = VII_T_U32,
+        .is_public = 0,
+    },
+    {
+        .id = 4,
+        .flags = VII_F_READ_ONLY,
+        .kind = VII_T_U32,
+        .is_public = 0,
+    },
+};
+
+static const vuint8_t contract_attr_by_id[] = {0, 0, 0, 1, 2};
 
 static const struct vii_attr_meta identity_attrs[] = {
     {
@@ -45,6 +64,17 @@ static const struct vii_attr_meta identity_attrs[] = {
 };
 
 static const vuint8_t identity_attr_by_id[] = {0, 1, 2};
+
+static const struct vii_attr_meta plugin_attrs[] = {
+    {
+        .id = 1,
+        .flags = VII_F_READ_ONLY,
+        .kind = VII_T_S32,
+        .is_public = 0,
+    },
+};
+
+static const vuint8_t plugin_attr_by_id[] = {0, 1};
 
 static const struct vii_attr_meta security_attrs[] = {
     {
@@ -115,24 +145,26 @@ static const struct vii_attr_meta system_attrs[] = {
 
 static const vuint8_t system_attr_by_id[] = {0, 1, 2, 3, 4};
 
-static const struct vii_attr_meta wasm_attrs[] = {
-    {
-        .id = 1,
-        .flags = VII_F_READ_ONLY | VII_F_SUBSCRIBABLE,
-        .kind = VII_T_S32,
-        .is_public = 1,
-    },
-    {
-        .id = 2,
-        .flags = VII_F_READ_ONLY,
-        .kind = VII_T_S32,
-        .is_public = 1,
-    },
-};
-
-static const vuint8_t wasm_attr_by_id[] = {0, 1, 2};
-
 const struct vii_class vii_classes[V_CLASS_ID_MAX + 1] = {
+    [V_CLASS_CONTRACT] =
+        {
+            .attr_by_id = contract_attr_by_id,
+            .attrs = contract_attrs,
+            .attr_id_max = 4,
+            .external_verbs = (1u << V_VERB_GET) | (1u << V_VERB_SUBSCRIBE) | (1u << V_VERB_UNSUBSCRIBE),
+            .body =
+                {
+                    [V_VERB_CREATE] = vlib_contract_create,
+                    [V_VERB_GET] = vlib_contract_get,
+                    [V_VERB_SET] = vlib_contract_set,
+                    [V_VERB_DELETE] = vlib_contract_delete,
+                    [V_VERB_SUBSCRIBE] = vlib_contract_subscribe,
+                    [V_VERB_UNSUBSCRIBE] = vlib_contract_unsubscribe,
+                    [V_VERB_NOTIFY] = vlib_contract_notify,
+                },
+            .attr_count = 2,
+            .singleton = 1,
+        },
     [V_CLASS_IDENTITY] =
         {
             .attr_by_id = identity_attr_by_id,
@@ -151,6 +183,25 @@ const struct vii_class vii_classes[V_CLASS_ID_MAX + 1] = {
                 },
             .attr_count = 2,
             .singleton = 0,
+        },
+    [V_CLASS_PLUGIN] =
+        {
+            .attr_by_id = plugin_attr_by_id,
+            .attrs = plugin_attrs,
+            .attr_id_max = 1,
+            .external_verbs = (1u << V_VERB_GET) | (1u << V_VERB_SUBSCRIBE) | (1u << V_VERB_UNSUBSCRIBE),
+            .body =
+                {
+                    [V_VERB_CREATE] = vlib_plugin_create,
+                    [V_VERB_GET] = vlib_plugin_get,
+                    [V_VERB_SET] = vlib_plugin_set,
+                    [V_VERB_DELETE] = vlib_plugin_delete,
+                    [V_VERB_SUBSCRIBE] = vlib_plugin_subscribe,
+                    [V_VERB_UNSUBSCRIBE] = vlib_plugin_unsubscribe,
+                    [V_VERB_NOTIFY] = vlib_plugin_notify,
+                },
+            .attr_count = 1,
+            .singleton = 1,
         },
     [V_CLASS_SECURITY] =
         {
@@ -207,25 +258,6 @@ const struct vii_class vii_classes[V_CLASS_ID_MAX + 1] = {
                     [V_VERB_NOTIFY] = vlib_system_notify,
                 },
             .attr_count = 4,
-            .singleton = 1,
-        },
-    [V_CLASS_WASM] =
-        {
-            .attr_by_id = wasm_attr_by_id,
-            .attrs = wasm_attrs,
-            .attr_id_max = 2,
-            .external_verbs = (1u << V_VERB_GET) | (1u << V_VERB_SUBSCRIBE) | (1u << V_VERB_UNSUBSCRIBE),
-            .body =
-                {
-                    [V_VERB_CREATE] = vlib_wasm_create,
-                    [V_VERB_GET] = vlib_wasm_get,
-                    [V_VERB_SET] = vlib_wasm_set,
-                    [V_VERB_DELETE] = vlib_wasm_delete,
-                    [V_VERB_SUBSCRIBE] = vlib_wasm_subscribe,
-                    [V_VERB_UNSUBSCRIBE] = vlib_wasm_unsubscribe,
-                    [V_VERB_NOTIFY] = vlib_wasm_notify,
-                },
-            .attr_count = 2,
             .singleton = 1,
         },
 };

@@ -268,6 +268,9 @@ TEST_F(Via, DispatchNegativeNullMessage)
 
 TEST_F(Via, DispatchNegativeClassOutOfRangeIsRefusedByTheLock)
 {
+#if !VEDAM_ENABLE_WWLOCK
+    GTEST_SKIP() << "wwlock disabled in this defconfig";
+#else
     vi_msg_t msg = {};
     vii_msg_t call = system_call(V_ORIGIN_EXTERNAL, V_VERB_GET, &msg);
 
@@ -275,6 +278,7 @@ TEST_F(Via, DispatchNegativeClassOutOfRangeIsRefusedByTheLock)
     EXPECT_EQ(vii_dispatch(&call), V_STATUS_INVALID_PARAMETER);
     call.class_id = static_cast<v_class_id_t>(V_CLASS_ID_MAX + 1);
     EXPECT_EQ(vii_dispatch(&call), V_STATUS_INVALID_PARAMETER);
+#endif
 }
 
 TEST_F(Via, DispatchCornerClassOutOfRangeWithoutLockMap)

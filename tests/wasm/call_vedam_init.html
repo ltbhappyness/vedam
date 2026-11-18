@@ -1,0 +1,61 @@
+<!--
+Copyright (C) 2026 LTBH Vedam project
+
+SPDX-License-Identifier: AGPL-3.0-only
+A changed copy of Vedam is not called Vedam.
+An application that only calls Vedam keeps its own license. See LICENSE.
+-->
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>vedam_init</title>
+<pre id="out">loading</pre>
+<script>
+(async function () {
+  const out = document.getElementById("out");
+  let instance;
+
+  function fdWrite(fd, iovs, count, nwritten) {
+    const view = new DataView(instance.exports.memory.buffer);
+    let written = 0;
+    let i;
+
+    void fd;
+    for (i = 0; i < count; i++) {
+      written += view.getUint32(iovs + i * 8 + 4, true);
+    }
+    view.setUint32(nwritten, written, true);
+    return 0;
+  }
+
+  function resizeHeap(requested) {
+    const memory = instance.exports.memory;
+    const page = 65536;
+    const have = memory.buffer.byteLength;
+
+    if (requested <= have) {
+      return 1;
+    }
+    try {
+      memory.grow(Math.ceil((requested - have) / page));
+      return 1;
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  const url = new URL("libvedam.wasm", window.location.href);
+  const bytes = await (await fetch(url)).arrayBuffer();
+  const ready = await WebAssembly.instantiate(bytes, {
+    wasi_snapshot_preview1: { fd_write: fdWrite },
+    env: { emscripten_resize_heap: resizeHeap },
+  });
+
+  instance = ready.instance;
+  if (instance.exports.__wasm_call_ctors) {
+    instance.exports.__wasm_call_ctors();
+  }
+  out.textContent = String(instance.exports.vedam_init());
+})().catch(function (err) {
+  document.getElementById("out").textContent = String(err);
+});
+</script>

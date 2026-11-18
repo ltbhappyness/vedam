@@ -5,8 +5,11 @@
  * A changed copy of Vedam is not called Vedam.
  * An application that only calls Vedam keeps its own license. See LICENSE.
  */
-#include "vti/grpc.h"
 #include "vti/grpc_uds.h"
+
+#if VEDAM_ENABLE_GRPC_UDS
+
+#include "vti/grpc.h"
 
 #include "platform/platform.h"
 #include "util/log.h"
@@ -180,3 +183,5 @@ const vti_ops_t vti_grpc_uds_ops = {
     .connect = uds_connect,
     .call = uds_call,
 };
+
+#endif /* VEDAM_ENABLE_GRPC_UDS */

@@ -1,0 +1,54 @@
+# Copyright (C) 2026 LTBH Vedam project
+# SPDX-License-Identifier: AGPL-3.0-only
+# A changed copy of Vedam is not called Vedam.
+# An application that only calls Vedam keeps its own license. See LICENSE.
+
+# One entry per compile flag. A defconfig key that is not listed here is rejected.
+options:
+  - name: VEDAM_NODE_CLASS
+    type: enum
+    values: [A, B, C, D, E]
+    default: C
+    description: Which sample this build is.
+  - name: VEDAM_ENABLE_MQ
+    type: bool
+    default: "y"
+    description: POSIX message queue transport.
+  - name: VEDAM_ENABLE_GRPC
+    type: bool
+    default: "y"
+    description: TCP transport that speaks the gRPC-shaped HTTP framing.
+  - name: VEDAM_ENABLE_CONNECT
+    type: bool
+    default: "n"
+    description: Connect transport. The body does not open a socket.
+  - name: VEDAM_ENABLE_GRPC_UDS
+    type: bool
+    default: "y"
+    description: Unix-socket transport that uses the same framing as the TCP transport.
+  - name: VEDAM_ENABLE_CONTRACT
+    type: bool
+    default: "y"
+    description: Compile the contract vertical.
+  - name: VEDAM_ENABLE_CONTRACT_ENGINE
+    type: bool
+    default: "n"
+    description: Reserve the in-process engine. It must stay n until an engine is vendored.
+  - name: VEDAM_ENABLE_PLUGIN
+    type: bool
+    default: "n"
+    description: Compile the plugin vertical.
+  - name: VEDAM_ENABLE_WWLOCK
+    type: bool
+    default: "y"
+    description: Wait-Die path and the wwlock archive. Class E uses the direct path.
+  - name: VEDAM_BUILD_VEDAMD
+    type: bool
+    default: "y"
+    description: Build the vedamd daemon.
+  - name: VEDAM_CONTRACT_BUDGET_DEFAULT
+    type: int
+    min: 1
+    max: 1000000000
+    default: 1000000
+    description: Default instruction ceiling. It is not hashed and is unused until an engine exists.

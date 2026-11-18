@@ -1,4 +1,4 @@
-class: wasm
+class: plugin
 singleton: true
 datastore: none
 
@@ -7,7 +7,7 @@ uuid_lines:
     minor: 0
     commit: "312808c619d5ce0b59c5a6cfee1f4e297b4a6a4c"
 
-# One WebAssembly configuration object per process. Configuration only.
+# One local program record per process. Other nodes do not replay it.
 # Public verbs: get, subscribe, unsubscribe.
 # Create, set, delete, and notify are not in the public header or proto.
 
@@ -37,17 +37,9 @@ verbs:
     comment: Push changed attributes to current subscribers.
 
 attrs:
-  ENGINE_STATE:
+  STATE:
     id: 1
     type: vint32_t
-    visibility: public
-    flags_public: [READ_ONLY, SUBSCRIBABLE]
-    flags_internal: [READ_ONLY, SUBSCRIBABLE]
-    comment: Configuration state of the WebAssembly engine slot.
-  WORKERS:
-    id: 2
-    type: vint32_t
-    visibility: public
-    flags_public: [READ_ONLY]
+    visibility: internal
     flags_internal: [READ_ONLY]
-    comment: Configured worker count for the WebAssembly slot.
+    comment: Local program record. Other nodes do not replay it.

@@ -12,11 +12,12 @@
 #include "core/node.h"
 #include "ds/hash.h"
 #include "platform/memory.h"
+#include "vii/class/contract.h"
 #include "vii/class/identity.h"
+#include "vii/class/plugin.h"
 #include "vii/class/security.h"
 #include "vii/class/storage.h"
 #include "vii/class/system.h"
-#include "vii/class/wasm.h"
 
 #include <string.h>
 
@@ -59,27 +60,37 @@ struct vta_service_names {
 };
 
 static const struct vta_uuid_seed g_uuid_seeds[] = {
+    {vii_contract_uuid[1][0], V_CLASS_CONTRACT, 1, 0},
     {vii_identity_uuid[1][0], V_CLASS_IDENTITY, 1, 0},
+    {vii_plugin_uuid[1][0], V_CLASS_PLUGIN, 1, 0},
     {vii_security_uuid[1][0], V_CLASS_SECURITY, 1, 0},
     {vii_storage_uuid[1][0], V_CLASS_STORAGE, 1, 0},
     {vii_system_uuid[1][0], V_CLASS_SYSTEM, 1, 0},
-    {vii_wasm_uuid[1][0], V_CLASS_WASM, 1, 0},
 };
 
 enum { VTA_UUID_SEED_COUNT = (int)(sizeof(g_uuid_seeds) / sizeof(g_uuid_seeds[0])) };
 
 static const struct vta_service_seed g_service_seeds[] = {
+    {"vedam.contract.v1.ContractService", 33, V_CLASS_CONTRACT, 1, 0},
     {"vedam.identity.v1.IdentityService", 33, V_CLASS_IDENTITY, 1, 0},
+    {"vedam.plugin.v1.PluginService", 29, V_CLASS_PLUGIN, 1, 0},
     {"vedam.security.v1.SecurityService", 33, V_CLASS_SECURITY, 1, 0},
     {"vedam.storage.v1.StorageService", 31, V_CLASS_STORAGE, 1, 0},
     {"vedam.system.v1.SystemService", 29, V_CLASS_SYSTEM, 1, 0},
-    {"vedam.wasm.v1.WasmService", 25, V_CLASS_WASM, 1, 0},
 };
 
 enum { VTA_SERVICE_SEED_COUNT = (int)(sizeof(g_service_seeds) / sizeof(g_service_seeds[0])) };
 
+static const char *const contract_services[VII_CONTRACT_UUID_MAJOR_MAX + 1] = {
+    [1] = "vedam.contract.v1.ContractService",
+};
+
 static const char *const identity_services[VII_IDENTITY_UUID_MAJOR_MAX + 1] = {
     [1] = "vedam.identity.v1.IdentityService",
+};
+
+static const char *const plugin_services[VII_PLUGIN_UUID_MAJOR_MAX + 1] = {
+    [1] = "vedam.plugin.v1.PluginService",
 };
 
 static const char *const security_services[VII_SECURITY_UUID_MAJOR_MAX + 1] = {
@@ -94,24 +105,22 @@ static const char *const system_services[VII_SYSTEM_UUID_MAJOR_MAX + 1] = {
     [1] = "vedam.system.v1.SystemService",
 };
 
-static const char *const wasm_services[VII_WASM_UUID_MAJOR_MAX + 1] = {
-    [1] = "vedam.wasm.v1.WasmService",
-};
-
 static const struct vta_service_names g_service_names[V_CLASS_ID_MAX + 1] = {
+    [V_CLASS_CONTRACT] = {contract_services, VII_CONTRACT_UUID_MAJOR_MAX + 1},
     [V_CLASS_IDENTITY] = {identity_services, VII_IDENTITY_UUID_MAJOR_MAX + 1},
+    [V_CLASS_PLUGIN] = {plugin_services, VII_PLUGIN_UUID_MAJOR_MAX + 1},
     [V_CLASS_SECURITY] = {security_services, VII_SECURITY_UUID_MAJOR_MAX + 1},
     [V_CLASS_STORAGE] = {storage_services, VII_STORAGE_UUID_MAJOR_MAX + 1},
     [V_CLASS_SYSTEM] = {system_services, VII_SYSTEM_UUID_MAJOR_MAX + 1},
-    [V_CLASS_WASM] = {wasm_services, VII_WASM_UUID_MAJOR_MAX + 1},
 };
 
 static const uint8_t *const g_latest_uuid[V_CLASS_ID_MAX + 1] = {
+    [V_CLASS_CONTRACT] = vii_contract_uuid[VII_CONTRACT_MAJOR][VII_CONTRACT_MINOR],
     [V_CLASS_IDENTITY] = vii_identity_uuid[VII_IDENTITY_MAJOR][VII_IDENTITY_MINOR],
+    [V_CLASS_PLUGIN] = vii_plugin_uuid[VII_PLUGIN_MAJOR][VII_PLUGIN_MINOR],
     [V_CLASS_SECURITY] = vii_security_uuid[VII_SECURITY_MAJOR][VII_SECURITY_MINOR],
     [V_CLASS_STORAGE] = vii_storage_uuid[VII_STORAGE_MAJOR][VII_STORAGE_MINOR],
     [V_CLASS_SYSTEM] = vii_system_uuid[VII_SYSTEM_MAJOR][VII_SYSTEM_MINOR],
-    [V_CLASS_WASM] = vii_wasm_uuid[VII_WASM_MAJOR][VII_WASM_MINOR],
 };
 
 /**

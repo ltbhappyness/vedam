@@ -21,12 +21,12 @@ include/lib/             vlib_* declarations
 include/core/            Process node
 include/lock/            Wait-Die wrapper
 include/vti/             Transport headers; install/include/vti ships the protobuf headers
-third_party/wwlock/      Wait-Die library submodule (MIT). src/lock compiles it
+third_party/wwlock/      Wait-Die library submodule (MIT). Vedam links its static archive
 src/va/                  Public verbs: pointer in, vii_dispatch
 src/via/                 vii_dispatch, the class table, contract checks, then vlib_*
 src/lib/                 Empty vertical bodies
 src/core/core.c          vedam_init / vedam_deinit
-src/lock/                Object and attribute locks; compiles the wwlock submodule
+src/lock/                Object and attribute locks, or nolock.c when wwlock is off
 src/ds/                  In-memory indexes used by the lock map
 src/vta/inproc/          Local door: caller thread, no pack
 src/vta/mq/              POSIX message queue
@@ -42,17 +42,11 @@ Adding a vertical is a YAML file in `model/classes/` plus a row in `model/types.
 
 ## Transports at init
 
-Unset variables use the defaults in parentheses. IPC and remote addresses include the process id or an ephemeral port so two nodes on one machine do not share a name.
+The local link is in-process. The IPC link is the message queue when `VEDAM_ENABLE_MQ` is on, and otherwise the Unix-socket transport when `VEDAM_ENABLE_GRPC_UDS` is on. The remote link is TCP when `VEDAM_ENABLE_GRPC` is on, and otherwise Connect when `VEDAM_ENABLE_CONNECT` is on. A link that is off does not listen. Init does not read a transport choice from the environment.
 
-| Variable | Default | Values |
-|----------|---------|--------|
-| `VEDAM_TRANSPORT_LOCAL` | `inproc` | `inproc` |
-| `VEDAM_TRANSPORT_IPC` | `mq` | `mq`, `grpc_uds` |
-| `VEDAM_TRANSPORT_IPC_ADDR` | `/vedam.<pid>`, or `/tmp/vedamd.<pid>.sock` for `grpc_uds` | queue name or socket path |
-| `VEDAM_TRANSPORT_REMOTE` | `grpc` | `grpc`, `connect` |
-| `VEDAM_TRANSPORT_REMOTE_ADDR` | `127.0.0.1:0` | `host:port` |
+The listen address is fixed in `vedam_init`: `/vedam.<pid>` for the message queue, `/tmp/vedamd.<pid>.sock` for the Unix socket, and `127.0.0.1:0` for TCP. Connect listens with an empty address and does not open a socket.
 
-`grpc` is HTTP/1.1 with a five-byte length prefix and a protobuf `Message`. libprotobuf is the codec. The gRPC C++ library is not linked. `connect` does not open a socket.
+`grpc` is HTTP/1.1 with a five-byte length prefix and a protobuf `Message`. libprotobuf is the codec. The gRPC C++ library is not linked.
 
 A remote client connects once. Further calls on that descriptor reuse the socket. The listen side reads the next request on the same connection.
 
@@ -69,9 +63,11 @@ cmake --install build
 ctest --test-dir build --output-on-failure
 ```
 
-The install prefix is `install/` beside `build/`. `install/include/vi` is the in-process API. `install/include/vti` is the generated protobuf headers for an IPC or remote peer. `install/lib` holds `libvedam.a` and `libvedam.so`. `install/bin` holds `vedamd`, which links `libvedam.a`. `librt` and `libprotobuf` stay on that link.
+Configure reads the committed `.config` and fails if that file is missing. `VEDAM_CONFIG_FILE` selects another file for that configure only and does not write `.config`. Classes A–D build the host libraries. Class E builds `libvedam.wasm` and requires `emcc`. `ctest --test-dir build -R ClassSample` rebuilds the same `build` directory once per class sample.
 
-`src/lock` adds the `third_party/wwlock` directory. Inside Vedam that directory builds an object library, and linking it places those objects in both Vedam libraries. Built on its own, wwlock is still a static library.
+The install prefix is `install/` beside `build/`. `install/include/vi` is the in-process API. `install/include/vti` is the generated protobuf headers for an IPC or remote peer. `install/lib` holds `libvedam.so`, `libvedam.a`, and `libwwlock.a`. It does not hold `libwwlock.so`. `install/bin` holds `vedamd`, which links `libvedam.so`. `ldd` on that shared library lists `libpthread`, `librt`, and `libprotobuf`. It does not list wwlock. An app that links the static archives passes `-lvedam -lwwlock` plus those system libraries.
+
+`src/lock` adds the `third_party/wwlock` directory. wwlock builds a position-independent static archive and a shared library. Vedam links the static archive into `libvedam.so`. Built on its own, wwlock still builds its test binaries.
 
 CMake reruns the generator when YAML or templates change. `python3 tools/codegen/generate.py --root . --check` compares the tree with a fresh render and writes nothing.
 
@@ -95,7 +91,7 @@ Queue tests open a POSIX message queue. A restricted sandbox can fail that open 
 install/bin/vedamd -f
 ```
 
-Without `-f` the process calls `daemon(3)` and then waits for SIGINT or SIGTERM. `vedam_init` has already started the local, IPC, and remote doors.
+Without `-f` the process calls `daemon(3)` and then waits for SIGINT or SIGTERM. `vedam_init` has already started the local door and each IPC or remote door this build compiled in.
 
 ```c
 #include "vi/vedam.h"

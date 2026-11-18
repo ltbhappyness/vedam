@@ -13,8 +13,11 @@
  * client generated from the proto uses.
  * A worker keeps the accepted socket open and reads the next request.
  */
-#include "vti/codec.h"
 #include "vti/grpc.h"
+
+#if VEDAM_ENABLE_GRPC || VEDAM_ENABLE_GRPC_UDS
+
+#include "vti/codec.h"
 
 #include "platform/memory.h"
 
@@ -850,3 +853,5 @@ extern "C" v_status_t vti_grpc_http_exchange(int fd, const char *service, const 
     *resp_len = body_len;
     return V_STATUS_SUCCESS;
 }
+
+#endif /* VEDAM_ENABLE_GRPC || VEDAM_ENABLE_GRPC_UDS */

@@ -11,5 +11,9 @@ extern "C" int vedam_legacy_lock(void);
 
 TEST(LockLegacy, ExistingCases)
 {
+#if !VEDAM_ENABLE_WWLOCK
+    GTEST_SKIP() << "wwlock disabled in this defconfig";
+#else
     EXPECT_EQ(vedam_legacy_lock(), 0);
+#endif
 }

@@ -42,27 +42,47 @@ set(vedam_modules
     vedam_vta
     vedam_core
 )
-add_library(vedam STATIC)
-add_library(vedam_shared SHARED)
-set_target_properties(vedam_shared PROPERTIES OUTPUT_NAME vedam)
-target_link_libraries(vedam PUBLIC ${vedam_modules})
-target_link_libraries(vedam PRIVATE wwlock)
-target_link_libraries(vedam_shared PUBLIC ${vedam_modules})
-target_link_libraries(vedam_shared PRIVATE wwlock)
-add_dependencies(vedam vedam_codegen)
-add_dependencies(vedam_shared vedam_codegen)
-
-add_subdirectory(src/vedamd)
-add_subdirectory(examples)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/vi DESTINATION include)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/vti/vedam DESTINATION include/vti
     FILES_MATCHING PATTERN "*.h")
-install(TARGETS vedam vedam_shared vedamd
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-)
+
+# libvedam.so holds the wwlock symbols when that path is on. libvedam.a does
+# not. A static app links libvedam.a and libwwlock.a, plus libpthread, librt,
+# and libprotobuf. libprotobuf stays shared, so ldd on libvedam.so lists it.
+# ldd does not list wwlock.
+if(VEDAM_NODE_CLASS STREQUAL "E")
+    include(cmake/VedamWasm.cmake)
+else()
+    add_library(vedam STATIC)
+    add_library(vedam_shared SHARED)
+    set_target_properties(vedam_shared PROPERTIES OUTPUT_NAME vedam)
+    target_link_libraries(vedam PUBLIC ${vedam_modules})
+    target_link_libraries(vedam_shared PUBLIC ${vedam_modules})
+    if(VEDAM_ENABLE_WWLOCK)
+        target_link_libraries(vedam_shared PRIVATE wwlock)
+    endif()
+    add_dependencies(vedam vedam_codegen)
+    add_dependencies(vedam_shared vedam_codegen)
+
+    if(VEDAM_BUILD_VEDAMD)
+        add_subdirectory(src/vedamd)
+    endif()
+    add_subdirectory(examples)
+
+    set(vedam_install_targets vedam vedam_shared)
+    if(VEDAM_BUILD_VEDAMD)
+        list(APPEND vedam_install_targets vedamd)
+    endif()
+    install(TARGETS ${vedam_install_targets}
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
+    )
+    if(VEDAM_ENABLE_WWLOCK)
+        install(TARGETS wwlock ARCHIVE DESTINATION lib)
+    endif()
+endif()
 
 enable_testing()
 add_subdirectory(tests)

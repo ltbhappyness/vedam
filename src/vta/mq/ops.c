@@ -12,6 +12,8 @@
  */
 #include "vti/mq.h"
 
+#if VEDAM_ENABLE_MQ
+
 #include "platform/platform.h"
 #include "util/attr.h"
 #include "util/log.h"
@@ -837,3 +839,5 @@ const vti_ops_t vti_mq_ops = {
     .connect = mq_connect,
     .call = mq_call,
 };
+
+#endif /* VEDAM_ENABLE_MQ */

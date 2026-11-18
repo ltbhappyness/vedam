@@ -1,0 +1,15 @@
+# Copyright (C) 2026 LTBH Vedam project
+# SPDX-License-Identifier: AGPL-3.0-only
+# A changed copy of Vedam is not called Vedam.
+# An application that only calls Vedam keeps its own license. See LICENSE.
+
+VEDAM_NODE_CLASS=A
+VEDAM_ENABLE_MQ=y
+VEDAM_ENABLE_GRPC=y
+VEDAM_ENABLE_GRPC_UDS=y
+# VEDAM_ENABLE_CONNECT is not set
+VEDAM_ENABLE_CONTRACT=y
+# VEDAM_ENABLE_CONTRACT_ENGINE is not set
+VEDAM_ENABLE_PLUGIN=y
+VEDAM_ENABLE_WWLOCK=y
+VEDAM_BUILD_VEDAMD=y

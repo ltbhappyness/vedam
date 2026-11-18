@@ -90,6 +90,69 @@ static int check_statuses(const v_status_t *statuses, vuint32_t n, v_status_t ex
     return 1;
 }
 
+#if VEDAM_ENABLE_MQ
+/**
+ * @brief Get System over the message queue while the node is up.
+ *
+ * @return 0 on success, 1 on failure.
+ */
+static int test_mq_get(void)
+{
+    vti_desc_t *tx;
+    vii_msg_t msg;
+    vi_msg_t one_vim;
+    v_attr_t one;
+    v_status_t one_st;
+    const char *qname;
+    v_status_t rc;
+
+    tx = vti_open(VTI_LINK_IPC);
+    if (tx == NULL) {
+        vedam_deinit();
+        return fail("mq open", V_STATUS_NO_MEMORY);
+    }
+    qname = vti_mq_bound(vedam_node()->rx[VTI_LINK_IPC]);
+    if (qname == NULL) {
+        vti_close(tx);
+        vedam_deinit();
+        return fail("mq bound", V_STATUS_FAILURE);
+    }
+    rc = vti_connect(tx, qname);
+    if (rc != V_STATUS_SUCCESS) {
+        vti_close(tx);
+        vedam_deinit();
+        return fail("mq connect", rc);
+    }
+    memset(&one, 0, sizeof(one));
+    memset(&one_st, 0, sizeof(one_st));
+    memset(&one_vim, 0, sizeof(one_vim));
+    memset(&msg, 0, sizeof(msg));
+    one.id = VI_SYSTEM_ATTR_NODE_CLASS;
+    one_vim.attr_count = 1;
+    one_vim.attr_list = &one;
+    one_vim.status_list = &one_st;
+    msg.class_id = V_CLASS_SYSTEM;
+    msg.origin = V_ORIGIN_EXTERNAL;
+    msg.verb = V_VERB_GET;
+    msg.major = VII_SYSTEM_MAJOR;
+    msg.minor = VII_SYSTEM_MINOR;
+    msg.msg = &one_vim;
+    rc = vti_call(tx, &msg);
+    if (rc != V_STATUS_SUCCESS) {
+        vti_close(tx);
+        vedam_deinit();
+        return fail("mq get", rc);
+    }
+    if (one_st != V_STATUS_SUCCESS) {
+        vti_close(tx);
+        vedam_deinit();
+        return fail("mq get status_list", one_st);
+    }
+    vti_close(tx);
+    return 0;
+}
+#endif
+
 static int test_public_get(void)
 {
     v_attr_t attrs[3];
@@ -143,58 +206,11 @@ static int test_public_get(void)
         return fail("get status_list", rc);
     }
 
-    {
-        vti_desc_t *tx;
-        vii_msg_t msg;
-        vi_msg_t one_vim;
-        v_attr_t one;
-        v_status_t one_st;
-        const char *qname;
-
-        tx = vti_open(VTI_LINK_IPC);
-        if (tx == NULL) {
-            vedam_deinit();
-            return fail("mq open", V_STATUS_NO_MEMORY);
-        }
-        qname = vti_mq_bound(vedam_node()->rx[VTI_LINK_IPC]);
-        if (qname == NULL) {
-            vti_close(tx);
-            vedam_deinit();
-            return fail("mq bound", V_STATUS_FAILURE);
-        }
-        rc = vti_connect(tx, qname);
-        if (rc != V_STATUS_SUCCESS) {
-            vti_close(tx);
-            vedam_deinit();
-            return fail("mq connect", rc);
-        }
-        memset(&one, 0, sizeof(one));
-        memset(&one_st, 0, sizeof(one_st));
-        memset(&one_vim, 0, sizeof(one_vim));
-        memset(&msg, 0, sizeof(msg));
-        one.id = VI_SYSTEM_ATTR_NODE_CLASS;
-        one_vim.attr_count = 1;
-        one_vim.attr_list = &one;
-        one_vim.status_list = &one_st;
-        msg.class_id = V_CLASS_SYSTEM;
-        msg.origin = V_ORIGIN_EXTERNAL;
-        msg.verb = V_VERB_GET;
-        msg.major = VII_SYSTEM_MAJOR;
-        msg.minor = VII_SYSTEM_MINOR;
-        msg.msg = &one_vim;
-        rc = vti_call(tx, &msg);
-        if (rc != V_STATUS_SUCCESS) {
-            vti_close(tx);
-            vedam_deinit();
-            return fail("mq get", rc);
-        }
-        if (one_st != V_STATUS_SUCCESS) {
-            vti_close(tx);
-            vedam_deinit();
-            return fail("mq get status_list", one_st);
-        }
-        vti_close(tx);
+#if VEDAM_ENABLE_MQ
+    if (test_mq_get() != 0) {
+        return 1;
     }
+#endif
 
     memset(attrs, 0, sizeof(attrs[0]));
     memset(statuses, 0, sizeof(statuses[0]));

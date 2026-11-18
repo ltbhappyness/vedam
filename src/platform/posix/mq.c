@@ -7,6 +7,8 @@
  */
 #include "platform/mq.h"
 
+#if VEDAM_ENABLE_MQ
+
 #if defined(__linux__) || defined(VEDAM_OS_LINUX)
 
 #include <fcntl.h>
@@ -176,3 +178,5 @@ void vplatform_mq_close(vplatform_mq_t *mq, const char *name)
 #else
 #error "vplatform mq: unsupported OS"
 #endif
+
+#endif /* VEDAM_ENABLE_MQ */

@@ -145,6 +145,7 @@ static int expect_mixed(v_status_t rc, const v_status_t *statuses)
     return 0;
 }
 
+#if VEDAM_ENABLE_MQ
 /**
  * @brief Carry mixed statuses over the message queue.
  *
@@ -195,7 +196,9 @@ static int test_mq_mixed(void)
     vedam_deinit();
     return 0;
 }
+#endif /* VEDAM_ENABLE_MQ */
 
+#if VEDAM_ENABLE_GRPC
 /**
  * @brief Carry mixed statuses over the temporary HTTP client path.
  *
@@ -320,6 +323,7 @@ static int test_http_one_socket(void)
     vedam_deinit();
     return 0;
 }
+#endif /* VEDAM_ENABLE_GRPC */
 
 /**
  * @brief Test-only System get body: fills the node class, the state, and the commit text.
@@ -479,9 +483,17 @@ static vti_desc_t *connect_link(int link)
     vti_desc_t *tx;
 
     if (link == VTI_LINK_IPC) {
+#if VEDAM_ENABLE_MQ
         addr = vti_mq_bound(vedam_node()->rx[VTI_LINK_IPC]);
+#else
+        addr = NULL;
+#endif
     } else {
+#if VEDAM_ENABLE_GRPC
         addr = vti_grpc_bound(vedam_node()->rx[VTI_LINK_REMOTE]);
+#else
+        addr = NULL;
+#endif
     }
     if (addr == NULL) {
         return NULL;
@@ -831,14 +843,18 @@ int vedam_legacy_codec(void)
     if (test_local_skips_codec() != 0) {
         return 1;
     }
+#if VEDAM_ENABLE_MQ
     if (test_mq_mixed() != 0) {
         return 1;
     }
+#endif
+#if VEDAM_ENABLE_GRPC
     if (test_http_mixed() != 0) {
         return 1;
     }
     if (test_http_one_socket() != 0) {
         return 1;
     }
+#endif
     return 0;
 }

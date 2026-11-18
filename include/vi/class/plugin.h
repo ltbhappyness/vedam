@@ -7,8 +7,8 @@
  *
  * THIS IS GENERATED CODE AND DO NOT EDIT
  */
-#ifndef VI_CLASS_WASM_H
-#define VI_CLASS_WASM_H
+#ifndef VI_CLASS_PLUGIN_H
+#define VI_CLASS_PLUGIN_H
 
 #include "vi/types.h"
 
@@ -17,25 +17,13 @@ extern "C" {
 #endif
 
 /**
- * @brief Attribute identifiers for wasm.
+ * @brief Attribute identifiers for plugin.
  *
  * Public attributes only.
  */
-typedef enum _vi_wasm_attr_t {
-    VI_WASM_ATTR_UNSPECIFIED = 0,
-    /**
-     * @brief Configuration state of the WebAssembly engine slot.
-     * @type vint32_t
-     * @flags READ_ONLY | SUBSCRIBABLE
-     */
-    VI_WASM_ATTR_ENGINE_STATE = 1,
-    /**
-     * @brief Configured worker count for the WebAssembly slot.
-     * @type vint32_t
-     * @flags READ_ONLY
-     */
-    VI_WASM_ATTR_WORKERS = 2,
-} vi_wasm_attr_t;
+typedef enum _vi_plugin_attr_t {
+    VI_PLUGIN_ATTR_UNSPECIFIED = 0,
+} vi_plugin_attr_t;
 
 /**
  * @brief Public id for this vertical (16 bytes).
@@ -45,8 +33,8 @@ typedef enum _vi_wasm_attr_t {
  * major.minor line; a later line does not rewrite it. A hyphenated form for logs
  * or HTTP is derived from these bytes when a message leaves this process.
  */
-static const uint8_t vi_wasm_uuid[16] = {
-    0x05, 0x3e, 0xf9, 0xba, 0x73, 0x54, 0x58, 0x91, 0xad, 0x47, 0x7a, 0x52, 0x9f, 0x4c, 0x1b, 0x64,
+static const uint8_t vi_plugin_uuid[16] = {
+    0xc8, 0xb1, 0xba, 0x03, 0xa6, 0x73, 0x5b, 0xa4, 0x95, 0x04, 0x45, 0x23, 0xcf, 0xaf, 0xc7, 0x62,
 };
 
 /**
@@ -61,7 +49,7 @@ static const uint8_t vi_wasm_uuid[16] = {
  * @param[in,out] msg Call message
  * @return The call status.
  */
-v_status_t vi_wasm_get(vi_msg_t *msg);
+v_status_t vi_plugin_get(vi_msg_t *msg);
 
 /**
  * @brief Register a watch for attributes marked subscribable. This call returns once.
@@ -72,7 +60,7 @@ v_status_t vi_wasm_get(vi_msg_t *msg);
  * @param[in,out] msg Call message
  * @return The call status.
  */
-v_status_t vi_wasm_subscribe(vi_msg_t *msg);
+v_status_t vi_plugin_subscribe(vi_msg_t *msg);
 
 /**
  * @brief Stop watches for the same caller. An empty list stops every watch.
@@ -83,10 +71,10 @@ v_status_t vi_wasm_subscribe(vi_msg_t *msg);
  * @param[in,out] msg Call message
  * @return The call status.
  */
-v_status_t vi_wasm_unsubscribe(vi_msg_t *msg);
+v_status_t vi_plugin_unsubscribe(vi_msg_t *msg);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* VI_CLASS_WASM_H */
+#endif /* VI_CLASS_PLUGIN_H */
