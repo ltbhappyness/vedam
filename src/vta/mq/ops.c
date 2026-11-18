@@ -483,6 +483,8 @@ static void *mq_worker(void *arg)
             /* The reply encode reads the marks, so the watch stays up through it. */
             vattr_write_watch(wm->codec.attrs, VTI_CODEC_MAX_ATTR);
             watched = 1;
+            /* The frame may claim an internal origin. The verb check sees external. */
+            req.origin = V_ORIGIN_EXTERNAL;
             st = vii_dispatch(&req);
         }
         send_reply(&reply_send, open_reply, sizeof(open_reply), reply_name, req_id, st, &req,

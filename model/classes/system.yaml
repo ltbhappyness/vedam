@@ -14,11 +14,11 @@ enums:
     prefix: VI_SYSTEM_NODE_CLASS_
     values:
       - {name: UNSPECIFIED, value: 0, comment: No role has been chosen.}
-      - {name: A, value: 1, comment: Archive. Keeps a full copy of agreed history.}
-      - {name: B, value: 2, comment: Full check of agreed history.}
-      - {name: C, value: 3, comment: Light operator. Default for this process.}
-      - {name: D, value: 4, comment: Small gateway.}
-      - {name: E, value: 5, comment: Thin client.}
+      - {name: A, value: 1, comment: "Full host libraries, all ordinary links, the daemon. It is not a different call shape."}
+      - {name: B, value: 2, comment: "The same host shape as A. It is not a second protocol."}
+      - {name: C, value: 3, comment: "The default host: queue, TCP, and the local socket, plus the daemon. It does not include the compiler path."}
+      - {name: D, value: 4, comment: "Host libraries with the byte links off. It does not listen on a queue or a socket."}
+      - {name: E, value: 5, comment: "A WebAssembly build of the libraries. No daemon, no lock, no byte links. It does not run on the machine that merely hosts the page."}
   - c_type: vi_system_state_e
     prefix: VI_SYSTEM_STATE_
     proto_name: SystemStateKind
@@ -72,7 +72,7 @@ attrs:
     visibility: public
     flags_public: [READ_ONLY]
     flags_internal: [READ_ONLY]
-    comment: Role of this process. A is archive, B is full validator, C is a light operator, D is a small gateway, E is a thin web client.
+    comment: The letter this build was compiled as. Not a runtime job title.
   PROTOCOL_VERSION:
     id: 2
     type: v_version_t

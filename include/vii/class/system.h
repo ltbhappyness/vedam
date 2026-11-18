@@ -25,7 +25,7 @@ extern "C" {
 typedef enum _vii_system_attr_t {
     VII_SYSTEM_ATTR_UNSPECIFIED = 0,
     /**
-     * @brief Role of this process. A is archive, B is full validator, C is a light operator, D is a small gateway, E is a thin web client.
+     * @brief The letter this build was compiled as. Not a runtime job title.
      * @type vi_system_node_class_t
      * @kind S32
      * @values vi_system_node_class_t

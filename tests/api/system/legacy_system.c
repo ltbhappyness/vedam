@@ -92,7 +92,7 @@ static int check_statuses(const v_status_t *statuses, vuint32_t n, v_status_t ex
 
 #if VEDAM_ENABLE_MQ
 /**
- * @brief Get System over the message queue while the node is up.
+ * @brief Get System over the message queue, and refuse an internal origin word.
  *
  * @return 0 on success, 1 on failure.
  */
@@ -147,6 +147,21 @@ static int test_mq_get(void)
         vti_close(tx);
         vedam_deinit();
         return fail("mq get status_list", one_st);
+    }
+    /* The frame carries an internal origin word. The worker still checks it as external. */
+    memset(&one_vim, 0, sizeof(one_vim));
+    memset(&msg, 0, sizeof(msg));
+    msg.class_id = V_CLASS_SYSTEM;
+    msg.origin = V_ORIGIN_INTERNAL;
+    msg.verb = V_VERB_DELETE;
+    msg.major = VII_SYSTEM_MAJOR;
+    msg.minor = VII_SYSTEM_MINOR;
+    msg.msg = &one_vim;
+    rc = vti_call(tx, &msg);
+    if (rc != V_STATUS_NOT_IMPLEMENTED) {
+        vti_close(tx);
+        vedam_deinit();
+        return fail("mq internal origin", rc);
     }
     vti_close(tx);
     return 0;

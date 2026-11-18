@@ -21,11 +21,11 @@ extern "C" {
  */
 typedef enum _vi_system_node_class_t {
     VI_SYSTEM_NODE_CLASS_UNSPECIFIED = 0, /**< No role has been chosen. */
-    VI_SYSTEM_NODE_CLASS_A = 1, /**< Archive. Keeps a full copy of agreed history. */
-    VI_SYSTEM_NODE_CLASS_B = 2, /**< Full check of agreed history. */
-    VI_SYSTEM_NODE_CLASS_C = 3, /**< Light operator. Default for this process. */
-    VI_SYSTEM_NODE_CLASS_D = 4, /**< Small gateway. */
-    VI_SYSTEM_NODE_CLASS_E = 5, /**< Thin client. */
+    VI_SYSTEM_NODE_CLASS_A = 1, /**< Full host libraries, all ordinary links, the daemon. It is not a different call shape. */
+    VI_SYSTEM_NODE_CLASS_B = 2, /**< The same host shape as A. It is not a second protocol. */
+    VI_SYSTEM_NODE_CLASS_C = 3, /**< The default host: queue, TCP, and the local socket, plus the daemon. It does not include the compiler path. */
+    VI_SYSTEM_NODE_CLASS_D = 4, /**< Host libraries with the byte links off. It does not listen on a queue or a socket. */
+    VI_SYSTEM_NODE_CLASS_E = 5, /**< A WebAssembly build of the libraries. No daemon, no lock, no byte links. It does not run on the machine that merely hosts the page. */
 } vi_system_node_class_t;
 
 /**
@@ -56,7 +56,7 @@ typedef struct _vi_system_state_t {
 typedef enum _vi_system_attr_t {
     VI_SYSTEM_ATTR_UNSPECIFIED = 0,
     /**
-     * @brief Role of this process. A is archive, B is full validator, C is a light operator, D is a small gateway, E is a thin web client.
+     * @brief The letter this build was compiled as. Not a runtime job title.
      * @type vi_system_node_class_t
      * @values vi_system_node_class_t
      * @flags READ_ONLY
